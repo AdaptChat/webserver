@@ -1,14 +1,53 @@
 use crate::Response;
 use axum::{
     body::{Bytes, HttpBody},
-    extract::FromRequest,
-    http::{header, Request},
+    extract::{FromRequest, FromRequestParts},
+    http::{header, request::Parts, Request},
 };
 use bytes::Buf;
-use essence::error::{Error, MalformedBodyErrorType};
+use essence::{
+    db::{get_pool, AuthDbExt},
+    error::{Error, MalformedBodyErrorType},
+    models::UserFlags,
+};
 use serde::de::DeserializeOwned;
 
-/// A JSON request body.
+/// Extracts authentication information (the token) from request headers.
+#[derive(Copy, Clone, Debug)]
+pub struct Auth(pub u64, pub UserFlags);
+
+#[axum::async_trait]
+impl<S> FromRequestParts<S> for Auth
+where
+    S: Send + Sync,
+{
+    type Rejection = Response<Error>;
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        let token = parts
+            .headers
+            .get("Authorization")
+            .ok_or(Error::InvalidToken {
+                message: "missing `Authorization` header, which should contain the token",
+            })?
+            .to_str()
+            .map_err(|_| Error::InvalidToken {
+                message: "Invalid Authorization header",
+            })?;
+
+        let (id, flags) =
+            get_pool()
+                .fetch_user_info_by_token(token)
+                .await?
+                .ok_or(Error::InvalidToken {
+                    message: "Invalid authorization token",
+                })?;
+
+        Ok(Self(id, flags))
+    }
+}
+
+/// A JSON request body. This consumes the request body, it must be used as the last extractor.
 #[derive(Clone, Debug)]
 pub struct Json<T>(pub T);
 

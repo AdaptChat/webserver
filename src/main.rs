@@ -28,7 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "missing DATABASE_URL environment variable"
     ))
     .await?;
-    essence::auth::configure_hasher().await;
+    essence::auth::configure_hasher(include_bytes!("../secret.key")).await;
 
     let router = Router::new()
         .route("/", get(|| async { (StatusCode::OK, "Hello from Adapt") }))
