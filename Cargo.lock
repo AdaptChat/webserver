@@ -1851,6 +1851,7 @@ name = "webserver"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "bytes",
  "dashmap",
  "dotenv 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "dotenv_codegen",

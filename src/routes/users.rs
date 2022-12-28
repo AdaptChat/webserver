@@ -1,5 +1,5 @@
-use crate::{ratelimit, routes::RouteResult, Response};
-use axum::{extract::Json, routing::post, Router};
+use crate::{extract::Json, ratelimit, routes::RouteResult, Response};
+use axum::{routing::post, Router};
 use essence::{
     auth::generate_token,
     db::{get_pool, AuthDbExt, UserDbExt},
