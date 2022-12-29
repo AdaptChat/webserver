@@ -33,6 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let router = Router::new()
         .route("/", get(|| async { (StatusCode::OK, "Hello from Adapt") }))
         .route("/teapot", get(|| async { StatusCode::IM_A_TEAPOT }))
+        .merge(routes::auth::router())
         .merge(routes::users::router());
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8077));
