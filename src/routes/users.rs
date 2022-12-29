@@ -11,12 +11,11 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use essence::models::User;
 use essence::{
     auth::generate_token,
     db::{get_pool, AuthDbExt, UserDbExt},
-    http::user::{CreateUserPayload, CreateUserResponse, DeleteUserPayload},
-    models::{ClientUser, ModelType, UserFlags},
+    http::user::{CreateUserPayload, CreateUserResponse, DeleteUserPayload, EditUserPayload},
+    models::{ClientUser, ModelType, User, UserFlags},
     snowflake::generate_snowflake,
     Error, NotFoundExt,
 };
@@ -95,6 +94,22 @@ pub async fn get_client_user(Auth(id, _): Auth) -> RouteResult<ClientUser> {
     Ok(Response::ok(user))
 }
 
+/// PATCH /users/me
+pub async fn edit_user(
+    Auth(id, _): Auth,
+    Json(payload): Json<EditUserPayload>,
+) -> RouteResult<User> {
+    if let Some(ref username) = payload.username {
+        validate_username(username)?;
+    }
+
+    get_pool()
+        .edit_user(id, payload)
+        .await
+        .map(Response::ok)
+        .map_err(Response::from)
+}
+
 /// DELETE /users/me
 pub async fn delete_user(
     Auth(id, flags): Auth,
@@ -137,7 +152,8 @@ pub fn router() -> Router {
         .route(
             "/users/me",
             get(get_client_user.layer(ratelimit!(3, 5)))
-                .delete(delete_user.layer(ratelimit!(2, 40))),
+                .patch(edit_user.layer(ratelimit!(3, 15)))
+                .delete(delete_user.layer(ratelimit!(2, 30))),
         )
         .route("/users/:id", get(get_user.layer(ratelimit!(3, 5))))
 }
