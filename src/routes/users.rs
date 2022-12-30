@@ -145,7 +145,6 @@ pub async fn get_user(_: Auth, Path(id): Path<u64>) -> RouteResult<User> {
     Ok(Response::ok(user))
 }
 
-#[inline]
 pub fn router() -> Router {
     Router::new()
         .route("/users", post(create_user.layer(ratelimit!(3, 15))))
