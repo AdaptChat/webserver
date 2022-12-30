@@ -4,13 +4,18 @@ use crate::{
     routes::RouteResult,
     Response,
 };
-use axum::{handler::Handler, routing::post, Router};
+use axum::{
+    extract::{Path, Query},
+    handler::Handler,
+    routing::{get, post},
+    Router,
+};
 use essence::{
     db::{get_pool, GuildDbExt},
-    http::guild::CreateGuildPayload,
+    http::guild::{CreateGuildPayload, GetGuildQuery},
     models::{Guild, ModelType},
     snowflake::{generate_snowflake, with_model_type},
-    Error,
+    Error, NotFoundExt,
 };
 
 pub fn validate_guild_payload(payload: &CreateGuildPayload) -> Result<(), Error> {
@@ -54,7 +59,26 @@ pub async fn create_guild(
     Ok(Response::created(guild))
 }
 
+/// GET /guilds/:id
+pub async fn get_guild(
+    Auth(user_id, _): Auth,
+    Path(guild_id): Path<u64>,
+    Query(query): Query<GetGuildQuery>,
+) -> RouteResult<Guild> {
+    let db = get_pool();
+    db.assert_member_in_guild(guild_id, user_id).await?;
+
+    let guild = db
+        .fetch_guild(guild_id, query)
+        .await?
+        .ok_or_not_found("guild", "Guild not found")?;
+
+    Ok(Response::ok(guild))
+}
+
 #[inline]
 pub fn router() -> Router {
-    Router::new().route("/guilds", post(create_guild.layer(ratelimit!(2, 15))))
+    Router::new()
+        .route("/guilds", post(create_guild.layer(ratelimit!(2, 15))))
+        .route("/guilds/:id", get(get_guild.layer(ratelimit!(3, 12))))
 }
