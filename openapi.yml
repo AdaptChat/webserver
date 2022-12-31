@@ -1,0 +1,384 @@
+openapi: "3.0.2"
+info:
+  title: Adapt REST API
+  version: "0.1.0"
+  description: Public REST API for the Adapt chat platform
+servers:
+  - url: https://adapt.lambdabot.cf
+    description: Production server
+  - url: http://127.0.0.1:8077
+    description: Local server
+components:
+  schemas:
+    # Common
+    Snowflake:
+      anyOf:
+        - type: string
+          minLength: 14
+          maxLength: 24
+          pattern: "^[0-9]{14,24}$"
+        - type: integer
+          minimum: 0
+          maximum: 9223372036854775807
+          format: int64
+
+    # User
+    User:
+      type: object
+      required: [id, username, discriminator, avatar, banner, bio, flags]
+      properties:
+        id:
+          $ref: "#/components/schemas/Snowflake"
+          description: The snowflake ID of the user.
+        username:
+          type: string
+          minLength: 2
+          maxLength: 32
+          description: The username of the user.
+        discriminator:
+          type: integer
+          minimum: 0
+          maximum: 9999
+          description: The discriminator of the user.
+        avatar:
+          type: string
+          format: url
+          nullable: true
+          description: The URL of the user's avatar.
+        banner:
+          type: string
+          format: url
+          nullable: true
+          description: The URL of the user's banner.
+        bio:
+          type: string
+          nullable: true
+          description: The bio of the user.
+        flags:
+          type: integer
+          format: int32
+          description: A bitmask of information associated with this user.
+    Relationship:
+      type: object
+      required: [id, type]
+      properties:
+        id:
+          $ref: "#/components/schemas/Snowflake"
+          description: The ID of the user that this relationship is with.
+        type:
+          type: string
+          enum: [friend, blocked]
+          description: The type of the relationship.
+    ClientUser:
+      type: object
+      required: [email, relationships]
+      allOf:
+        - $ref: "#/components/schemas/User"
+        - properties:
+            email:
+              type: string
+              format: email
+              description: The associated email of the client's account. If the client is a bot, this is null.
+              nullable: true
+            relationships:
+              type: array
+              items:
+                $ref: "#/components/schemas/Relationship"
+              description: An array of relationships that the client has with other users.
+
+    # Errors
+    NotFound:
+      type: object
+      required: [entity, message]
+      description: The requested resource was not found.
+      properties:
+        entity:
+          type: string
+          description: The type of item that couldn't be found.
+        message:
+          type: string
+          description: The error message.
+    InvalidToken:
+      type: object
+      required: [message]
+      description: An invalid token was provided, or it wasn't provided at all.
+      properties:
+        message:
+          type: string
+          description: The error message.
+    InvalidCredentials:
+      type: object
+      required: [what, message]
+      description: The provided credentials were invalid.
+      properties:
+        what:
+          type: string
+          description: Which credential was invalid.
+        message:
+          type: string
+          description: The error message.
+    InvalidField:
+      type: object
+      required: [field, message]
+      description: Invalid field in the request body.
+      properties:
+        field:
+          type: string
+          description: The name of the field that was invalid.
+        message:
+          type: string
+          description: The error message.
+    AlreadyTaken:
+      type: object
+      required: [what, message]
+      description: The requested resource (e.g. username or email) is already taken.
+      properties:
+        what:
+          type: string
+          description: The type of item that was already taken.
+        message:
+          type: string
+          description: The error message.
+paths:
+  /:
+    get:
+      summary: Hello World
+      description: Returns a hello world message
+      responses:
+        200:
+          description: The server is running properly.
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Hello from Adapt
+  /users/me:
+    get:
+      summary: Get Self
+      description: Returns the client's user object.
+      responses:
+        200:
+          description: The client's user object.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientUser"
+        401:
+          description: The client is not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvalidToken"
+    patch:
+      summary: Edit User
+      description: Edits properties of the authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  minLength: 2
+                  maxLength: 32
+                  description: The new username of the user.
+                avatar:
+                  type: string
+                  format: url
+                  nullable: true
+                  description: The new avatar of the user.
+                banner:
+                  type: string
+                  format: url
+                  nullable: true
+                  description: The new banner of the user.
+                bio:
+                  type: string
+                  nullable: true
+                  description: The new bio of the user.
+      responses:
+        200:
+          description: The updated user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        400:
+          description: The request body was invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvalidField"
+        401:
+          description: The client is not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvalidToken"
+        409:
+          description: The username or email is already taken.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlreadyTaken"
+    post:
+      summary: Create User
+      description: Creates a new user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, email, password]
+              properties:
+                username:
+                  type: string
+                  minLength: 2
+                  maxLength: 32
+                  description: The username of the user.
+                email:
+                  type: string
+                  format: email
+                  description: The email of the user.
+                password:
+                  type: string
+                  minLength: 8
+                  maxLength: 32
+                  description: The password of the user.
+      responses:
+        200:
+          description: The user ID and token of the created user.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, token]
+                properties:
+                  id:
+                    $ref: "#/components/schemas/Snowflake"
+                    description: The snowflake ID of the user.
+                  token:
+                    type: string
+                    description: The token of the user, used for authentication.
+        400:
+          description: The request body was invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvalidField"
+        409:
+          description: The username or email is already taken.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlreadyTaken"
+    delete:
+      summary: Delete User
+      description: Deletes the authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+                  minLength: 8
+                  maxLength: 32
+                  description: The password of the user.
+      responses:
+        204:
+          description: The user was deleted.
+        401:
+          description: The client is not authenticated.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/InvalidToken"
+                  - $ref: "#/components/schemas/"
+  /users/{id}:
+    get:
+      summary: Get User
+      description: Gets a user by their ID.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the user.
+          schema:
+            $ref: "#/components/schemas/Snowflake"
+      responses:
+        200:
+          description: The user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        401:
+          description: The client is not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvalidToken"
+        404:
+          description: The user was not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFound"
+  /login:
+    post:
+      summary: Generate Token (Login)
+      description: Given their credentials, retrieves an authentication token for the user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                  minLength: 2
+                  maxLength: 32
+                  description: The email of the user's account.
+                password:
+                  type: string
+                  minLength: 6
+                  maxLength: 32
+                  description: The password used to log in.
+                method:
+                  type: string
+                  enum: [new, revoke, reuse]
+                  default: reuse
+                  description: The method to use to retrieve an authentication token.
+      responses:
+        200:
+          description: The user ID and token of the user.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, token]
+                properties:
+                  id:
+                    $ref: "#/components/schemas/Snowflake"
+                    description: The snowflake ID of the user.
+                  token:
+                    type: string
+                    description: The token of the user, used for authentication.
+        400:
+          description: The request body was invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvalidField"
+        401:
+          description: The credentials were invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvalidCredentials"
