@@ -189,9 +189,6 @@ pub async fn delete_user(
 #[utoipa::path(
     get,
     path = "/users/{id}",
-    params(
-        ("id" = u64, Path, description = "User ID"),
-    ),
     responses(
         (status = OK, description = "User object", body = User),
         (status = NOT_FOUND, description = "User not found", body = Error),

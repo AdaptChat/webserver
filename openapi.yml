@@ -304,14 +304,6 @@ paths:
         Fetches information about a user by their ID.
       operationId: get_user
       parameters:
-      - name: id
-        in: path
-        description: User ID
-        required: true
-        deprecated: false
-        schema:
-          type: integer
-          format: int64
       - name: ''
         in: path
         required: true
