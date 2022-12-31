@@ -59,7 +59,6 @@ pub async fn login(
     }))
 }
 
-#[inline]
 pub fn router() -> Router {
     Router::new().route("/login", post(login.layer(ratelimit!(3, 10))))
 }

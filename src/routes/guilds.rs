@@ -88,7 +88,6 @@ pub async fn get_guild(
     Ok(Response::ok(guild))
 }
 
-#[inline]
 pub fn router() -> Router {
     Router::new()
         .route(
