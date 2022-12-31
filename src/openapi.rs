@@ -63,6 +63,10 @@ use utoipa::{Modify, OpenApi};
         essence::Error,
     )),
     modifiers(&Security),
+    servers(
+        (description = "Production", url = "https://adapt.lambdabot.cf"),
+        (description = "Local", url = "http://localhost:8077"),
+    )
 )]
 pub struct ApiSpec;
 

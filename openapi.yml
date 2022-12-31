@@ -8,6 +8,11 @@ info:
   license:
     name: AGPL-3.0
   version: 0.1.0
+servers:
+- url: https://adapt.lambdabot.cf
+  description: Production
+- url: http://localhost:8077
+  description: Local
 paths:
   /guilds:
     get:
