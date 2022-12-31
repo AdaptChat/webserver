@@ -13,14 +13,14 @@ components:
     # Common
     Snowflake:
       anyOf:
-        - type: string
-          minLength: 14
-          maxLength: 24
-          pattern: "^[0-9]{14,24}$"
         - type: integer
           minimum: 0
           maximum: 9223372036854775807
           format: int64
+        - type: string
+          minLength: 14
+          maxLength: 24
+          pattern: "^[0-9]{14,24}$"
 
     # User
     User:
