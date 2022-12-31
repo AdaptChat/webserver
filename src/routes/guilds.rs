@@ -82,7 +82,8 @@ pub async fn create_guild(
     responses(
         (status = OK, description = "Array of guild objects", body = [Guild]),
         (status = UNAUTHORIZED, description = "Invalid token", body = Error),
-    )
+    ),
+    security(("token" = [])),
 )]
 pub async fn get_all_guilds(
     Auth(user_id, _): Auth,

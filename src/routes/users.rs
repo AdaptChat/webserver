@@ -193,6 +193,7 @@ pub async fn delete_user(
         (status = OK, description = "User object", body = User),
         (status = NOT_FOUND, description = "User not found", body = Error),
     ),
+    security(("token" = [])),
 )]
 pub async fn get_user(_auth: Auth, Path(id): Path<u64>) -> RouteResult<User> {
     let user = get_pool()
