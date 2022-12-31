@@ -7,7 +7,7 @@ use crate::{
 use axum::{
     extract::{Path, Query},
     handler::Handler,
-    routing::{get, post},
+    routing::get,
     Router,
 };
 use essence::{
@@ -55,8 +55,20 @@ pub async fn create_guild(
     let guild = transaction
         .create_guild(guild_id, channel_id, role_id, owner_id, payload)
         .await?;
+    transaction.commit().await?;
 
     Ok(Response::created(guild))
+}
+
+/// GET /guilds
+pub async fn get_all_guilds(
+    Auth(user_id, _): Auth,
+    Query(query): Query<GetGuildQuery>,
+) -> RouteResult<Vec<Guild>> {
+    let db = get_pool();
+    let guilds = db.fetch_all_guilds_for_user(user_id, query).await?;
+
+    Ok(Response::ok(guilds))
 }
 
 /// GET /guilds/:id
@@ -79,6 +91,9 @@ pub async fn get_guild(
 #[inline]
 pub fn router() -> Router {
     Router::new()
-        .route("/guilds", post(create_guild.layer(ratelimit!(2, 15))))
+        .route(
+            "/guilds",
+            get(get_all_guilds.layer(ratelimit!(1, 5))).post(create_guild.layer(ratelimit!(2, 15))),
+        )
         .route("/guilds/:id", get(get_guild.layer(ratelimit!(3, 12))))
 }

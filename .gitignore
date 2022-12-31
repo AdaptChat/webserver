@@ -9,3 +9,4 @@
 .vscode
 .DS_Store
 .env
+secret.key
