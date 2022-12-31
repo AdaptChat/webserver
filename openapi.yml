@@ -11,7 +11,7 @@ info:
 servers:
 - url: https://adapt.lambdabot.cf
   description: Production
-- url: http://localhost:8077
+- url: http://127.0.0.1:8077
   description: Local
 paths:
   /guilds:
@@ -632,7 +632,9 @@ components:
           type: string
           description: The thumbnail URL of the embed.
         timestamp:
-          $ref: '#/components/schemas/Timestamp'
+          type: string
+          format: date-time
+          description: The timestamp of the embed.
         title:
           type: string
           description: The title of the embed.
@@ -1044,6 +1046,9 @@ components:
       description: Represents the type along with type-specific info of a guild channel.
       discriminator:
         propertyName: type
+    GuildFlags:
+      type: integer
+      format: int32
     GuildFolder:
       type: object
       description: Represents a folder that contains a collection of guilds. This is only shown in the client's UI.
@@ -1123,6 +1128,12 @@ components:
           type: integer
           format: int64
           description: The user ID of the logged in user.
+    MalformedBodyErrorType:
+      type: string
+      enum:
+      - invalid_content_type
+      - invalid_utf8
+      - invalid_json
     MaybePartialUser:
       oneOf:
       - type: object
@@ -1158,7 +1169,9 @@ components:
             format: int64
             description: The ID of the guild this member is in.
           joined_at:
-            $ref: '#/components/schemas/Timestamp'
+            type: string
+            format: date-time
+            description: The time that the member joined the guild.
           nick:
             type: string
             description: The nickname of the member. `None` if the member has no nickname.
@@ -1381,6 +1394,9 @@ components:
           $ref: '#/components/schemas/Permissions'
         deny:
           $ref: '#/components/schemas/Permissions'
+    Permissions:
+      type: integer
+      format: int64
     Relationship:
       type: object
       description: Represents a relationship that a user has with another user.
@@ -1444,6 +1460,9 @@ components:
             The backend will try its best to keep all role positions unique, but on the event two
             collide due to something such as a data race, then the true position of these roles will
             not be predictable, and will likely be in the order of model creation.
+    RoleFlags:
+      type: integer
+      format: int32
     TextBasedGuildChannelInfo:
       type: object
       description: Represents common information found in text-based guild channels.
@@ -1511,6 +1530,9 @@ components:
         username:
           type: string
           description: The username of the user.
+    UserFlags:
+      type: integer
+      format: int32
   securitySchemes:
     token:
       type: apiKey

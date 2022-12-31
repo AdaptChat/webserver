@@ -22,6 +22,7 @@ pub use response::Response;
 use axum::{http::StatusCode, routing::get, Router, Server};
 use std::net::SocketAddr;
 use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -43,7 +44,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/teapot", get(|| async { StatusCode::IM_A_TEAPOT }))
         .merge(routes::auth::router())
         .merge(routes::guilds::router())
-        .merge(routes::users::router());
+        .merge(routes::users::router())
+        .merge(SwaggerUi::new("/docs").url("/openapi.json", spec));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8077));
     Server::bind(&addr)

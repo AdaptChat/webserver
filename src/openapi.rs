@@ -32,6 +32,7 @@ use utoipa::{Modify, OpenApi};
         models::TextBasedGuildChannelInfo,
         models::ChannelType,
         models::GuildChannelInfo,
+        models::Permissions,
         models::PermissionOverwrite,
         models::GuildChannel,
         models::DmChannelInfo,
@@ -42,6 +43,7 @@ use utoipa::{Modify, OpenApi};
         models::GuildMemberCount,
         models::PartialGuild,
         models::Guild,
+        models::GuildFlags,
         models::EmbedType,
         models::EmbedAuthor,
         models::EmbedFooter,
@@ -54,18 +56,21 @@ use utoipa::{Modify, OpenApi};
         models::Message,
         models::PermissionPair,
         models::Role,
+        models::RoleFlags,
         models::User,
+        models::UserFlags,
         models::GuildFolderInfo,
         models::GuildFolder,
         models::ClientUser,
         models::RelationshipType,
         models::Relationship,
         essence::Error,
+        essence::error::MalformedBodyErrorType,
     )),
     modifiers(&Security),
     servers(
         (description = "Production", url = "https://adapt.lambdabot.cf"),
-        (description = "Local", url = "http://localhost:8077"),
+        (description = "Local", url = "http://127.0.0.1:8077"),
     )
 )]
 pub struct ApiSpec;
