@@ -17,7 +17,7 @@ bytes = "1"
 dashmap = "5.4.0"
 dotenv = "0.15"
 dotenv_codegen = { git = "https://github.com/FerrisChat/dotenv" }
-essence = { path = "../essence", features = ["auth", "db"] }
+essence = { path = "../essence", features = ["auth", "db", "openapi"] }
 forwarded-header-value = "0.1"
 rmp-serde = "1.1"
 serde = { version = "1", features = ["derive"] }
@@ -25,3 +25,4 @@ simd-json = "0.7"
 tokio = { version = "1", features = ["rt-multi-thread", "net", "time", "macros", "sync", "signal", "parking_lot"] }
 tower = { version = "0.4", features = ["buffer"] }
 tower-http = { version = "0.3", features = ["cors"] }
+utoipa = { git = "https://github.com/juhaku/utoipa", features = ["axum_extras", "chrono", "yaml"] }

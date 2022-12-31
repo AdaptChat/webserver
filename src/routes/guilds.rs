@@ -38,7 +38,19 @@ pub fn validate_guild_payload(payload: &CreateGuildPayload) -> Result<(), Error>
     Ok(())
 }
 
-/// POST /guilds
+/// Create Guild
+///
+/// Creates a new guild with the given payload.
+#[utoipa::path(
+    post,
+    path = "/guilds",
+    request_body = CreateGuildPayload,
+    responses(
+        (status = CREATED, description = "Guild was successfully created", body = Guild),
+        (status = BAD_REQUEST, description = "Invalid payload", body = Error),
+    ),
+    security(("token" = [])),
+)]
 pub async fn create_guild(
     Auth(owner_id, _): Auth,
     Json(payload): Json<CreateGuildPayload>,
@@ -60,7 +72,18 @@ pub async fn create_guild(
     Ok(Response::created(guild))
 }
 
-/// GET /guilds
+/// Get All Guilds
+///
+/// Fetches information for all guilds the user is a member of, abiding by the given query.
+#[utoipa::path(
+    get,
+    path = "/guilds",
+    params(GetGuildQuery),
+    responses(
+        (status = OK, description = "Array of guild objects", body = [Guild]),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+    )
+)]
 pub async fn get_all_guilds(
     Auth(user_id, _): Auth,
     Query(query): Query<GetGuildQuery>,
@@ -71,7 +94,21 @@ pub async fn get_all_guilds(
     Ok(Response::ok(guilds))
 }
 
-/// GET /guilds/:id
+/// Get Guild
+///
+/// Fetches information for the guild with the given ID. You must be a member of the guild to fetch
+/// it.
+#[utoipa::path(
+    get,
+    path = "/guilds/{id}",
+    responses(
+        (status = OK, description = "Guild object", body = Guild),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = FORBIDDEN, description = "You are not a member of the guild", body = Error),
+        (status = NOT_FOUND, description = "Guild not found", body = Error),
+    ),
+    security(("token" = [])),
+)]
 pub async fn get_guild(
     Auth(user_id, _): Auth,
     Path(guild_id): Path<u64>,

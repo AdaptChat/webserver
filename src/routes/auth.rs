@@ -8,14 +8,26 @@ use essence::{
     Error, NotFoundExt,
 };
 
-/// POST /login
-pub async fn login(
-    Json(LoginRequest {
+/// Generate Token (Login)
+///
+/// Login to the API with your email and password to retrieve an authentication token.
+#[utoipa::path(
+    post,
+    path = "/login",
+    request_body = LoginRequest,
+    responses(
+        (status = OK, description = "Login successful", body = LoginResponse),
+        (status = UNAUTHORIZED, description = "Invalid credentials", body = Error),
+    )
+)]
+pub async fn login(json: Json<LoginRequest>) -> RouteResult<LoginResponse> {
+    // utoipa does not support parameter destructuring for structs, so we have to do it here instead
+    let Json(LoginRequest {
         email,
         password,
         method,
-    }): Json<LoginRequest>,
-) -> RouteResult<LoginResponse> {
+    }) = json;
+
     let db = get_pool();
     let mut user = db
         .fetch_client_user_by_email(&email)

@@ -11,6 +11,7 @@
 extern crate dotenv_codegen;
 
 pub mod extract;
+mod openapi;
 pub mod ratelimit;
 pub mod response;
 pub mod routes;
@@ -20,6 +21,7 @@ pub use response::Response;
 
 use axum::{http::StatusCode, routing::get, Router, Server};
 use std::net::SocketAddr;
+use utoipa::OpenApi;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -29,6 +31,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ))
     .await?;
     essence::auth::configure_hasher(include_bytes!("../secret.key")).await;
+
+    tokio::fs::write("openapi.yml", openapi::ApiSpec::openapi().to_yaml()?).await?;
 
     let router = Router::new()
         .route("/", get(|| async { (StatusCode::OK, "Hello from Adapt") }))

@@ -50,14 +50,24 @@ fn validate_username(username: impl AsRef<str>) -> Result<(), Error> {
     Ok(())
 }
 
-/// POST /users
-pub async fn create_user(
-    Json(CreateUserPayload {
+/// Create User
+///
+/// Registers a new user account with the given payload.
+#[utoipa::path(
+    post,
+    path = "/users",
+    request_body = CreateUserPayload,
+    responses(
+        (status = CREATED, description = "User ID and token", body = CreateUserResponse),
+        (status = BAD_REQUEST, description = "Invalid payload", body = Error),
+    ),
+)]
+pub async fn create_user(payload: Json<CreateUserPayload>) -> RouteResult<CreateUserResponse> {
+    let Json(CreateUserPayload {
         username,
         email,
         password,
-    }): Json<CreateUserPayload>,
-) -> RouteResult<CreateUserResponse> {
+    }) = payload;
     validate_username(&username)?;
 
     let db = get_pool();
@@ -83,7 +93,18 @@ pub async fn create_user(
     Ok(Response::created(CreateUserResponse { id, token }))
 }
 
-/// GET /users/me
+/// Get Authenticated User
+///
+/// Fetches information about the logged in user.
+#[utoipa::path(
+    get,
+    path = "/users/me",
+    responses(
+        (status = OK, description = "User object", body = ClientUser),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+    ),
+    security(("token" = [])),
+)]
 pub async fn get_client_user(Auth(id, _): Auth) -> RouteResult<ClientUser> {
     let db = get_pool();
     let user = db
@@ -94,7 +115,20 @@ pub async fn get_client_user(Auth(id, _): Auth) -> RouteResult<ClientUser> {
     Ok(Response::ok(user))
 }
 
-/// PATCH /users/me
+/// Edit User
+///
+/// Modifies information about the logged in user.
+#[utoipa::path(
+    patch,
+    path = "/users/me",
+    request_body = EditUserPayload,
+    responses(
+        (status = OK, description = "User object after modification", body = User),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = BAD_REQUEST, description = "Invalid payload", body = Error),
+    ),
+    security(("token" = [])),
+)]
 pub async fn edit_user(
     Auth(id, _): Auth,
     Json(payload): Json<EditUserPayload>,
@@ -110,11 +144,25 @@ pub async fn edit_user(
         .map_err(Response::from)
 }
 
-/// DELETE /users/me
+/// Delete User
+///
+/// Deletes the user account of the authenticated user. This is irreversible.
+#[utoipa::path(
+    delete,
+    path = "/users/me",
+    request_body = DeleteUserPayload,
+    responses(
+        (status = NO_CONTENT, description = "User was successfully d4eleted"),
+        (status = UNAUTHORIZED, description = "Invalid token/credentials", body = Error),
+        (status = BAD_REQUEST, description = "Invalid payload", body = Error),
+    ),
+    security(("token" = [])),
+)]
 pub async fn delete_user(
     Auth(id, flags): Auth,
-    Json(DeleteUserPayload { password }): Json<DeleteUserPayload>,
+    Json(payload): Json<DeleteUserPayload>,
 ) -> NoContentResult {
+    let DeleteUserPayload { password } = payload;
     let mut db = get_pool();
 
     if flags.contains(UserFlags::BOT) {
@@ -135,8 +183,21 @@ pub async fn delete_user(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// GET /users/:id
-pub async fn get_user(_: Auth, Path(id): Path<u64>) -> RouteResult<User> {
+/// Get User
+///
+/// Fetches information about a user by their ID.
+#[utoipa::path(
+    get,
+    path = "/users/{id}",
+    params(
+        ("id" = u64, Path, description = "User ID"),
+    ),
+    responses(
+        (status = OK, description = "User object", body = User),
+        (status = NOT_FOUND, description = "User not found", body = Error),
+    ),
+)]
+pub async fn get_user(_auth: Auth, Path(id): Path<u64>) -> RouteResult<User> {
     let user = get_pool()
         .fetch_user_by_id(id)
         .await?

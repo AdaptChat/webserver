@@ -1,384 +1,1524 @@
-openapi: "3.0.2"
+openapi: 3.0.3
 info:
-  title: Adapt REST API
-  version: "0.1.0"
-  description: Public REST API for the Adapt chat platform
-servers:
-  - url: https://adapt.lambdabot.cf
-    description: Production server
-  - url: http://127.0.0.1:8077
-    description: Local server
+  title: webserver
+  description: Serves Adapt's public REST API.
+  contact:
+    name: ''
+    email: ''
+  license:
+    name: AGPL-3.0
+  version: 0.1.0
+paths:
+  /guilds:
+    get:
+      tags:
+      - guilds
+      summary: Get All Guilds
+      description: |-
+        Get All Guilds
+
+        Fetches information for all guilds the user is a member of, abiding by the given query.
+      operationId: get_all_guilds
+      parameters:
+      - name: channels
+        in: query
+        description: Whether to resolve the guild's channels in the response.
+        required: false
+        schema:
+          type: boolean
+      - name: members
+        in: query
+        description: Whether to resolve the guild's members in the response.
+        required: false
+        schema:
+          type: boolean
+      - name: roles
+        in: query
+        description: Whether to resolve the guild's roles in the response.
+        required: false
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: Array of guild objects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Guild'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+    post:
+      tags:
+      - guilds
+      summary: Create Guild
+      description: |-
+        Create Guild
+
+        Creates a new guild with the given payload.
+      operationId: create_guild
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGuildPayload'
+        required: true
+      responses:
+        '201':
+          description: Guild was successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Guild'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+  /guilds/{id}:
+    get:
+      tags:
+      - guilds
+      summary: Get Guild
+      description: |-
+        Get Guild
+
+        Fetches information for the guild with the given ID. You must be a member of the guild to fetch
+        it.
+      operationId: get_guild
+      parameters:
+      - name: ''
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: Guild object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Guild'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: You are not a member of the guild
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+  /login:
+    post:
+      tags:
+      - auth
+      summary: Generate Token (Login)
+      description: |-
+        Generate Token (Login)
+
+        Login to the API with your email and password to retrieve an authentication token.
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+  /users:
+    post:
+      tags:
+      - users
+      summary: Create User
+      description: |-
+        Create User
+
+        Registers a new user account with the given payload.
+      operationId: create_user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserPayload'
+        required: true
+      responses:
+        '201':
+          description: User ID and token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateUserResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+  /users/me:
+    get:
+      tags:
+      - users
+      summary: Get Authenticated User
+      description: |-
+        Get Authenticated User
+
+        Fetches information about the logged in user.
+      operationId: get_client_user
+      responses:
+        '200':
+          description: User object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientUser'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+    delete:
+      tags:
+      - users
+      summary: Delete User
+      description: |-
+        Delete User
+
+        Deletes the user account of the authenticated user. This is irreversible.
+      operationId: delete_user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteUserPayload'
+        required: true
+      responses:
+        '204':
+          description: User was successfully d4eleted
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid token/credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+    patch:
+      tags:
+      - users
+      summary: Edit User
+      description: |-
+        Edit User
+
+        Modifies information about the logged in user.
+      operationId: edit_user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditUserPayload'
+        required: true
+      responses:
+        '200':
+          description: User object after modification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+  /users/{id}:
+    get:
+      tags:
+      - users
+      summary: Get User
+      description: |-
+        Get User
+
+        Fetches information about a user by their ID.
+      operationId: get_user
+      parameters:
+      - name: id
+        in: path
+        description: User ID
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      - name: ''
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: User object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
 components:
   schemas:
-    # Common
-    Snowflake:
-      anyOf:
-        - type: integer
-          minimum: 0
-          maximum: 9223372036854775807
-          format: int64
-        - type: string
-          minLength: 14
-          maxLength: 24
-          pattern: "^[0-9]{14,24}$"
-
-    # User
-    User:
+    Attachment:
       type: object
-      required: [id, username, discriminator, avatar, banner, bio, flags]
+      description: Represents a message attachment.
+      required:
+      - id
+      - filename
+      - size
+      - url
+      properties:
+        description:
+          type: string
+          description: The description/alt text of the attachment.
+        filename:
+          type: string
+          description: The filename of the attachment.
+        id:
+          type: integer
+          format: int64
+          description: The snowflake ID of the attachment.
+        size:
+          type: integer
+          format: int64
+          description: The size of the attachment, in bytes.
+        url:
+          type: string
+          description: The CDN URL of the attachment.
+    ChangeEmailPayload:
+      type: object
+      description: Payload sent when changing a user's email.
+      required:
+      - password
+      - new_email
+      properties:
+        new_email:
+          type: string
+          description: The new email of the user.
+        password:
+          type: string
+          description: The current password of the user.
+    ChangePasswordPayload:
+      type: object
+      description: Payload sent when changing a user's password.
+      required:
+      - current_password
+      - new_password
+      properties:
+        current_password:
+          type: string
+          description: The current password of the user.
+        new_password:
+          type: string
+          description: The new password of the user.
+    Channel:
+      oneOf:
+      - type: object
+        required:
+        - Guild
+        properties:
+          Guild:
+            $ref: '#/components/schemas/GuildChannel'
+      - type: object
+        required:
+        - Dm
+        properties:
+          Dm:
+            $ref: '#/components/schemas/DmChannel'
+      description: Represents any channel.
+    ChannelType:
+      type: string
+      description: |-
+        An intermediate representation of a channel's type. This is never used directly, but is used
+        to help deserialization.
+      enum:
+      - text
+      - announcement
+      - voice
+      - category
+      - dm
+      - group
+    ClientUser:
+      allOf:
+      - $ref: '#/components/schemas/User'
+      - type: object
+        required:
+        - relationships
+        properties:
+          email:
+            type: string
+            description: |-
+              The associated email of the client's account.
+
+              If the client is a bot, this is `None`.
+          relationships:
+            type: array
+            items:
+              $ref: '#/components/schemas/Relationship'
+      description: |-
+        Represents user info about the client. This has other information that is not available to the
+        public, such as emails, guilds, and relationships (friends and blocked users).
+    CreateGuildPayload:
+      type: object
+      description: The payload sent to create a new guild.
+      required:
+      - name
+      properties:
+        banner:
+          type: string
+          description: The banner URL for the guild. Must be a valid URL, or `None` to not set a banner.
+        description:
+          type: string
+          description: |-
+            The description of the guild. Must be between 0 and 1000 characters, or `None` for
+            no description.
+        icon:
+          type: string
+          description: The icon URL for the guild. Must be a valid URL, or `None` to not set an icon.
+        name:
+          type: string
+          description: The name of the guild. Must be between 2 and 100 characters.
+        public:
+          type: boolean
+          description: Whether the guild should be public or not. Defaults to `false`.
+    CreateUserPayload:
+      type: object
+      description: Payload sent to create a new user.
+      required:
+      - username
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          description: The email of the user. Must be a valid email address.
+        password:
+          type: string
+          description: The password of the user. Must be between 8 and 32 characters.
+        username:
+          type: string
+          description: The username of the user. Must be between 2 and 32 characters.
+    CreateUserResponse:
+      type: object
+      description: Data returned when creating a new user.
+      required:
+      - id
+      - token
       properties:
         id:
-          $ref: "#/components/schemas/Snowflake"
+          type: integer
+          format: int64
+          description: The ID of the user.
+        token:
+          type: string
+          description: The token to use for authentication.
+    DeleteGuildPayload:
+      type: object
+      description: The payload sent to delete a guild.
+      required:
+      - password
+      properties:
+        password:
+          type: string
+          description: |-
+            The password of the user. If this is a bot account, the password is not required and no
+            body should be sent.
+    DeleteUserPayload:
+      type: object
+      description: Payload sent when deleting a user.
+      required:
+      - password
+      properties:
+        password:
+          type: string
+          description: The password of the user.
+    DmChannel:
+      allOf:
+      - $ref: '#/components/schemas/DmChannelInfo'
+      - type: object
+        required:
+        - id
+        properties:
+          id:
+            type: integer
+            format: int64
+            description: The ID of the channel.
+      description: Represents a direct-message-like channel that does not belong in a guild.
+    DmChannelInfo:
+      oneOf:
+      - type: object
+        description: A normal DM channel.
+        required:
+        - type
+        properties:
+          recipient_ids:
+            type: array
+            items:
+              type: integer
+              format: int64
+            maxItems: 2
+            minItems: 2
+          type:
+            type: string
+            enum:
+            - dm
+      - type: object
+        description: A group chat consisting of multiple users.
+        required:
+        - name
+        - owner_id
+        - recipient_ids
+        - type
+        properties:
+          icon:
+            type: string
+            description: The URL of the group's icon, if any.
+          name:
+            type: string
+            description: The name of the group chat.
+          owner_id:
+            type: integer
+            format: int64
+            description: The ID of the owner of the group chat.
+          recipient_ids:
+            type: array
+            items:
+              type: integer
+              format: int64
+              description: A list of recipients in the group chat by user ID.
+          topic:
+            type: string
+            description: The topic of the group chat, if any.
+          type:
+            type: string
+            enum:
+            - group
+      description: Represents extra information associated with DM channels.
+      discriminator:
+        propertyName: type
+    EditGuildPayload:
+      type: object
+      description: The payload sent to edit a guild.
+      properties:
+        banner:
+          $ref: '#/components/schemas/Maybe'
+        description:
+          $ref: '#/components/schemas/Maybe'
+        icon:
+          $ref: '#/components/schemas/Maybe'
+        name:
+          type: string
+          description: The new name of the guild. Leave empty to keep the current name.
+        public:
+          type: boolean
+          description: Whether the guild should be public or not. Leave empty to keep the current setting.
+    EditUserPayload:
+      type: object
+      description: Payload sent when editing a user.
+      properties:
+        avatar:
+          $ref: '#/components/schemas/Maybe'
+        banner:
+          $ref: '#/components/schemas/Maybe'
+        bio:
+          $ref: '#/components/schemas/Maybe'
+        username:
+          type: string
+          description: The new username of the user. Leave empty to keep the current username.
+    Embed:
+      type: object
+      description: |-
+        Represents a special card shown in the UI for various purposes, embedding extra information
+        to the user in a more visually appealing way. These are known as embeds and are used in
+        messages.
+      required:
+      - type
+      - author
+      - footer
+      properties:
+        author:
+          $ref: '#/components/schemas/EmbedAuthor'
+        color:
+          type: integer
+          format: int32
+          description: The color of the embed, shown as a stripe on the left side of the embed.
+        description:
+          type: string
+          description: The description, or body text of the embed.
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmbedField'
+        footer:
+          $ref: '#/components/schemas/EmbedFooter'
+        hue:
+          type: integer
+          format: int32
+          description: |-
+            The hue of the main body of the background. This is only available for rich embeds. This
+            should be a number between `0` and `100`, measured as a percentage.
+        image:
+          type: string
+          description: The image URL of the embed.
+        thumbnail:
+          type: string
+          description: The thumbnail URL of the embed.
+        timestamp:
+          $ref: '#/components/schemas/Timestamp'
+        title:
+          type: string
+          description: The title of the embed.
+        type:
+          $ref: '#/components/schemas/EmbedType'
+        url:
+          type: string
+          description: |-
+            The URL of the embed, shown as a hyperlink in the title. Only available if the embed has a
+            title.
+    EmbedAuthor:
+      type: object
+      description: The author information of a message embed.
+      required:
+      - name
+      properties:
+        icon_url:
+          type: string
+          description: The URL of the author's icon.
+        name:
+          type: string
+          description: The name of the author.
+        url:
+          type: string
+          description: The URL of the author, shown as a hyperlink of the author's name.
+    EmbedField:
+      type: object
+      description: Information about an embed's field.
+      required:
+      - name
+      - value
+      properties:
+        align:
+          $ref: '#/components/schemas/MessageEmbedFieldAlignment'
+        name:
+          type: string
+          description: The name of the field.
+        value:
+          type: string
+          description: The value of the field.
+    EmbedFooter:
+      type: object
+      description: The footer information of a message embed.
+      required:
+      - text
+      properties:
+        icon_url:
+          type: string
+          description: The URL of the footer's icon.
+        text:
+          type: string
+          description: The text of the footer.
+    EmbedType:
+      type: string
+      description: The type of a message embed.
+      enum:
+      - rich
+      - image
+      - video
+      - meta
+    Error:
+      oneOf:
+      - type: object
+        description: Received a malformed JSON or MsgPack body.
+        required:
+        - error_type
+        - message
+        - type
+        properties:
+          error_type:
+            $ref: '#/components/schemas/MalformedBodyErrorType'
+          message:
+            type: string
+            description: A generalized message about the error.
+          type:
+            type: string
+            enum:
+            - malformed_body
+      - type: object
+        description: |-
+          You are missing the request body in an endpoint that requires it. This is commonly JSON
+          or MsgPack.
+        required:
+        - message
+        - type
+        properties:
+          message:
+            type: string
+            description: The error message.
+          type:
+            type: string
+            enum:
+            - missing_body
+      - type: object
+        description: Invalid field in the request body.
+        required:
+        - field
+        - message
+        - type
+        properties:
+          field:
+            type: string
+            description: The field that failed validation.
+          message:
+            type: string
+            description: The error message.
+          type:
+            type: string
+            enum:
+            - invalid_field
+      - type: object
+        description: You are missing a required field in the request body.
+        required:
+        - field
+        - message
+        - type
+        properties:
+          field:
+            type: string
+            description: The name of the missing field.
+          message:
+            type: string
+            description: The error message.
+          type:
+            type: string
+            enum:
+            - missing_field
+      - type: object
+        description: Could not resolve a plausible IP address from the request.
+        required:
+        - message
+        - type
+        properties:
+          message:
+            type: string
+            description: The error message.
+          type:
+            type: string
+            enum:
+            - malformed_ip
+      - type: object
+        description: The entity was not found.
+        required:
+        - entity
+        - message
+        - type
+        properties:
+          entity:
+            type: string
+            description: The type of item that couldn't be found.
+          message:
+            type: string
+            description: The error message.
+          type:
+            type: string
+            enum:
+            - not_found
+      - type: object
+        description: Tried authorizing a bot account with anything but an authentication token.
+        required:
+        - message
+        - type
+        properties:
+          message:
+            type: string
+            description: The error message.
+          type:
+            type: string
+            enum:
+            - unsupported_auth_method
+      - type: object
+        description: |-
+          The request required a valid authentication token, but one of the following happened:
+
+          * The token was not provided.
+          * The token was malformed, i.e. a non-UTF-8 string.
+          * The token does not exist or is invalid.
+        required:
+        - message
+        - type
+        properties:
+          message:
+            type: string
+            description: The error message.
+          type:
+            type: string
+            enum:
+            - invalid_token
+      - type: object
+        description: Invalid login credentials were provided, i.e. an invalid password.
+        required:
+        - what
+        - message
+        - type
+        properties:
+          message:
+            type: string
+            description: The error message.
+          type:
+            type: string
+            enum:
+            - invalid_credentials
+          what:
+            type: string
+            description: Which credential was invalid.
+      - type: object
+        description: You must be a member of the guild to perform the requested action.
+        required:
+        - guild_id
+        - message
+        - type
+        properties:
+          guild_id:
+            type: integer
+            format: int64
+            description: The ID of the guild you are not a member of.
+          message:
+            type: string
+            description: The error message.
+          type:
+            type: string
+            enum:
+            - not_member
+      - type: object
+        description: Something was already taken, e.g. a username or email.
+        required:
+        - what
+        - message
+        - type
+        properties:
+          message:
+            type: string
+            description: The error message.
+          type:
+            type: string
+            enum:
+            - already_taken
+          what:
+            type: string
+            description: What was already taken.
+      - type: object
+        description: You are sending requests too quickly are you are being rate limited.
+        required:
+        - retry_after
+        - ip
+        - message
+        - type
+        properties:
+          ip:
+            type: string
+            description: The IP address that is being rate limited.
+          message:
+            type: string
+            description: The ratelimited message.
+          retry_after:
+            type: number
+            format: float
+            description: How long you should wait before sending another request, in whole seconds.
+          type:
+            type: string
+            enum:
+            - ratelimited
+      - type: object
+        description: Internal server error occured, this is likely a bug.
+        required:
+        - message
+        - type
+        properties:
+          debug:
+            type: string
+            description: A debug version of the error, or `None` if there is no debug version.
+          message:
+            type: string
+            description: The error message.
+          type:
+            type: string
+            enum:
+            - internal_error
+          what:
+            type: string
+            description: What caused the error. `None` if unknown.
+      description: An error that occurs within Adapt.
+      discriminator:
+        propertyName: type
+    Guild:
+      allOf:
+      - $ref: '#/components/schemas/PartialGuild'
+      - type: object
+        properties:
+          channels:
+            type: array
+            items:
+              $ref: '#/components/schemas/GuildChannel'
+          members:
+            type: array
+            items:
+              $ref: '#/components/schemas/Member'
+          roles:
+            type: array
+            items:
+              $ref: '#/components/schemas/Role'
+      description: Represents a guild with all information, sometimes referred to as a server.
+    GuildChannel:
+      allOf:
+      - $ref: '#/components/schemas/GuildChannelInfo'
+      - type: object
+        required:
+        - id
+        - guild_id
+        - name
+        - position
+        - overwrites
+        properties:
+          guild_id:
+            type: integer
+            format: int64
+            description: The ID of the guild that this channel is in.
+          id:
+            type: integer
+            format: int64
+            description: The ID of the channel.
+          name:
+            type: string
+            description: The name of the channel.
+          overwrites:
+            type: array
+            items:
+              $ref: '#/components/schemas/PermissionOverwrite'
+          parent_id:
+            type: integer
+            format: int64
+            description: |-
+              The ID of the parent category of the channel. This is `None` if the channel is not in a
+              category.
+          position:
+            type: integer
+            format: int32
+            description: |-
+              The position of the channel in the channel list. A lower value means appearing "higher" in
+              the UI, basically think of this as a 0-indexed listing of the channels from top-to-bottom.
+
+              Positions are scoped per category, and categories have their own positions. Channels that
+              lack a category will be shown above all categories. This is because no channels can be
+              displayed in between or after categories - in the UI all non-category channels are displayed
+              above any other category channels.
+
+              For example:
+
+              ```text
+              [0] text-channel
+              [1] voice-channel
+              [2] another-text-channel
+              [0] Category
+              [0] another-text-channel
+              [1] another-voice-channel
+              [0] Another Category
+              [1] nested-voice-channel
+              [2] nested-voice-channel-2
+              [1] Yet Another Category
+              [0] another-text-channel
+              ```
+      description: Represents a channel in a guild.
+    GuildChannelInfo:
+      oneOf:
+      - allOf:
+        - $ref: '#/components/schemas/TextBasedGuildChannelInfo'
+        - type: object
+          required:
+          - type
+          properties:
+            type:
+              type: string
+              enum:
+              - text
+      - allOf:
+        - $ref: '#/components/schemas/TextBasedGuildChannelInfo'
+        - type: object
+          required:
+          - type
+          properties:
+            type:
+              type: string
+              enum:
+              - announcement
+      - type: object
+        description: A voice channel.
+        required:
+        - user_limit
+        - type
+        properties:
+          type:
+            type: string
+            enum:
+            - voice
+          user_limit:
+            type: integer
+            format: int32
+            description: |-
+              The user limit of the channel. This should be a value between `0` and `500`. A value
+              of `0` indicates the absence of a user limit.
+      - type: object
+        required:
+        - type
+        properties:
+          type:
+            type: string
+            enum:
+            - category
+      description: Represents the type along with type-specific info of a guild channel.
+      discriminator:
+        propertyName: type
+    GuildFolder:
+      type: object
+      description: Represents a folder that contains a collection of guilds. This is only shown in the client's UI.
+      required:
+      - guilds
+      properties:
+        guilds:
+          type: array
+          items:
+            type: integer
+            format: int64
+            description: |-
+              A list of guild IDs representing guilds that were placed in this folder, in order from
+              top to bottom.
+        path:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuildFolderInfo'
+    GuildFolderInfo:
+      type: object
+      description: |-
+        Represents information such as the name and color of a guild folder.
+        This is only shown in the client's UI.
+      required:
+      - name
+      - color
+      properties:
+        color:
+          type: integer
+          format: int32
+          description: The color of the folder.
+        name:
+          type: string
+          description: The name of the folder.
+    GuildMemberCount:
+      type: object
+      description: Represents member counts for a guild.
+      required:
+      - total
+      properties:
+        online:
+          type: integer
+          format: int32
+          description: |-
+            The number of members that are online. If this was part of a partial guild object, then
+            this will be `None`.
+        total:
+          type: integer
+          format: int32
+          description: The total number of members in the guild.
+    LoginRequest:
+      type: object
+      description: The request body for POST /login
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          description: The email to log in with.
+        method:
+          $ref: '#/components/schemas/TokenRetrievalMethod'
+        password:
+          type: string
+          description: The password to log in with.
+    LoginResponse:
+      type: object
+      description: The response body for POST /login
+      required:
+      - user_id
+      - token
+      properties:
+        token:
+          type: string
+          description: The authentication token to use for future requests.
+        user_id:
+          type: integer
+          format: int64
+          description: The user ID of the logged in user.
+    MaybePartialUser:
+      oneOf:
+      - type: object
+        required:
+        - Full
+        properties:
+          Full:
+            $ref: '#/components/schemas/User'
+      - type: object
+        required:
+        - Partial
+        properties:
+          Partial:
+            type: object
+            description: A user with only an ID.
+            required:
+            - id
+            properties:
+              id:
+                type: integer
+                format: int64
+      description: Potentially a partial user.
+    Member:
+      allOf:
+      - $ref: '#/components/schemas/MaybePartialUser'
+      - type: object
+        required:
+        - guild_id
+        - joined_at
+        properties:
+          guild_id:
+            type: integer
+            format: int64
+            description: The ID of the guild this member is in.
+          joined_at:
+            $ref: '#/components/schemas/Timestamp'
+          nick:
+            type: string
+            description: The nickname of the member. `None` if the member has no nickname.
+          roles:
+            type: array
+            items:
+              type: integer
+              format: int64
+              description: A list of IDs of the roles that the member has. This could be `None` in some cases.
+      description: Represents a member of a guild. Members are user objects associated with a guild.
+    MemberOrUser:
+      oneOf:
+      - type: object
+        required:
+        - Member
+        properties:
+          Member:
+            $ref: '#/components/schemas/Member'
+      - type: object
+        required:
+        - User
+        properties:
+          User:
+            $ref: '#/components/schemas/User'
+      description: Represents either a member or a user.
+    Message:
+      allOf:
+      - $ref: '#/components/schemas/MessageInfo'
+      - type: object
+        required:
+        - id
+        - channel_id
+        - embeds
+        - attachments
+        - flags
+        - stars
+        properties:
+          attachments:
+            type: array
+            items:
+              $ref: '#/components/schemas/Attachment'
+          author:
+            $ref: '#/components/schemas/MemberOrUser'
+          author_id:
+            type: integer
+            format: int64
+            description: The snowflake ID of the author of this message, or `None` if this is a system message.
+          channel_id:
+            type: integer
+            format: int64
+            description: The snowflake ID of the channel this message was sent in.
+          content:
+            type: string
+            description: The text content of this message.
+          embeds:
+            type: array
+            items:
+              $ref: '#/components/schemas/Embed'
+          flags:
+            $ref: '#/components/schemas/MessageFlags'
+          guild_id:
+            type: integer
+            format: int64
+            description: The snowflake ID of the guild this message was sent in, if any.
+          id:
+            type: integer
+            format: int64
+            description: The snowflake ID of the message.
+          nonce:
+            type: string
+            description: |-
+              A custom nonce for this message. This is a random string that if used, a message with the
+              same nonce will be dispatched by the websocket, indicating that the message was sent.
+
+              This is only used once and it is not stored.
+          revision_id:
+            type: integer
+            format: int64
+            description: The revision ID of the message. This is `None` if this message is the current revision.
+          stars:
+            type: integer
+            format: int32
+            description: The amount of stars this message has received.
+      description: Represents a text or system message in a channel.
+    MessageEmbedFieldAlignment:
+      type: string
+      description: The alignment type of a message embed field.
+      enum:
+      - Left
+      - Center
+      - Right
+      - Inline
+    MessageInfo:
+      oneOf:
+      - type: object
+        required:
+        - type
+        properties:
+          type:
+            type: string
+            enum:
+            - default
+      - type: object
+        description: A join message, sent when a user joins either a group DM or a guild.
+        required:
+        - user_id
+        - type
+        properties:
+          type:
+            type: string
+            enum:
+            - join
+          user_id:
+            type: integer
+            format: int64
+            description: The ID of the user who joined.
+      - type: object
+        description: A leave message, sent when a user leaves either a group DM or a guild.
+        required:
+        - user_id
+        - type
+        properties:
+          type:
+            type: string
+            enum:
+            - leave
+          user_id:
+            type: integer
+            format: int64
+            description: The ID of the user who left.
+      - type: object
+        description: A message that indicates another message has been pinned.
+        required:
+        - pinned_message_id
+        - pinned_by
+        - type
+        properties:
+          pinned_by:
+            type: integer
+            format: int64
+            description: The ID of the user that pinned the message.
+          pinned_message_id:
+            type: integer
+            format: int64
+            description: The ID of the message that was pinned.
+          type:
+            type: string
+            enum:
+            - pin
+      description: Represents the type and info of a message.
+      discriminator:
+        propertyName: type
+    PartialGuild:
+      type: object
+      description: Represents a guild with partial information, sometimes referred to as a server.
+      required:
+      - id
+      - name
+      - owner_id
+      - flags
+      properties:
+        banner:
+          type: string
+          description: The URL of the banner of the guild.
+        description:
+          type: string
+          description: The description of the guild.
+        flags:
+          $ref: '#/components/schemas/GuildFlags'
+        icon:
+          type: string
+          description: The URL of the icon of the guild.
+        id:
+          type: integer
+          format: int64
+          description: The snowflake ID of the guild.
+        member_count:
+          $ref: '#/components/schemas/GuildMemberCount'
+        name:
+          type: string
+          description: The name of the guild.
+        owner_id:
+          type: integer
+          format: int64
+          description: The ID of the owner of the guild.
+        vanity_url:
+          type: string
+          description: |-
+            The vanity URL code of the guild. This solely includes the code, not the full URL.
+            This is `None` if the guild does not have a vanity URL.
+
+            Guilds have the ability to set vanity URLs once they surpass 100 non-bot members *and* have
+            their visibility set to public. The vanity URL code can be between 3 and 32 characters long.
+    PermissionOverwrite:
+      allOf:
+      - $ref: '#/components/schemas/PermissionPair'
+      - type: object
+        required:
+        - id
+        properties:
+          id:
+            type: integer
+            format: int64
+            description: |-
+              The ID of the role or user this overwrite applies to. The model type can be extracted from
+              the ID.
+      description: Represents a permission overwrite.
+    PermissionPair:
+      type: object
+      description: |-
+        Represents a pair of permissions, one representing allowed permissions and the other
+        representing denied permissions. This is so that any permission that is represented as
+        "neutral" where it is neither allowed or denied remains easily overwritten by lower
+        roles or members.
+      required:
+      - allow
+      - deny
+      properties:
+        allow:
+          $ref: '#/components/schemas/Permissions'
+        deny:
+          $ref: '#/components/schemas/Permissions'
+    Relationship:
+      type: object
+      description: Represents a relationship that a user has with another user.
+      required:
+      - id
+      - type
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: The ID of the user that this relationship is with.
+        type:
+          $ref: '#/components/schemas/RelationshipType'
+    RelationshipType:
+      type: string
+      description: |-
+        Represents a client user with addition to their password.
+        Represents the type of relationship a user has with another user.
+      enum:
+      - friend
+      - blocked
+    Role:
+      type: object
+      description: A role in a guild.
+      required:
+      - id
+      - guild_id
+      - name
+      - permissions
+      - position
+      - flags
+      properties:
+        color:
+          type: integer
+          format: int32
+          description: |-
+            The color of the role. This is an integer between 0 and 16777215, or ``None`` if the role
+            has no color (in which case it inherits the color).
+        flags:
+          $ref: '#/components/schemas/RoleFlags'
+        guild_id:
+          type: integer
+          format: int64
+          description: The ID of the guild this role belongs to.
+        id:
+          type: integer
+          format: int64
+          description: The snowflake ID of the role.
+        name:
+          type: string
+          description: The name of the role.
+        permissions:
+          $ref: '#/components/schemas/PermissionPair'
+        position:
+          type: integer
+          format: int32
+          description: |-
+            The position of this role in the role hierarchy. The lower the number, the lower the role.
+            The default role always has a position of 0.
+
+            The backend will try its best to keep all role positions unique, but on the event two
+            collide due to something such as a data race, then the true position of these roles will
+            not be predictable, and will likely be in the order of model creation.
+    TextBasedGuildChannelInfo:
+      type: object
+      description: Represents common information found in text-based guild channels.
+      required:
+      - nsfw
+      - locked
+      - slowmode
+      properties:
+        locked:
+          type: boolean
+          description: |-
+            Whether the channel is locked. Only people with the `MANAGE_CHANNELS` permission can
+            send messages in locked channels.
+        nsfw:
+          type: boolean
+          description: Whether the channel is NSFW.
+        slowmode:
+          type: integer
+          format: int32
+          description: |-
+            The slowmode delay of the channel, in **milliseconds**. This should be a value between
+            `0` and `86_400_000` (24 hours). `0` indicates the absence of slowmode.
+        topic:
+          type: string
+          description: The topic of the channel, if any.
+    TokenRetrievalMethod:
+      type: string
+      description: The method to use to retrieve an authentication token.
+      enum:
+      - new
+      - revoke
+      - reuse
+    User:
+      type: object
+      description: |-
+        Represents a user account.
+
+        A lot of information is stored in the user's flags, including whether or not the user is a bot
+        account.
+      required:
+      - id
+      - username
+      - discriminator
+      - flags
+      properties:
+        avatar:
+          type: string
+          description: The URL of the user's avatar. This is `None` if the user has no avatar.
+        banner:
+          type: string
+          description: The URL of the user's banner. This is `None` if the user has no banner.
+        bio:
+          type: string
+          description: The user's bio. This is `None` if the user has no bio.
+        discriminator:
+          type: integer
+          format: int32
+          description: The discriminator of the user, between 0 and 9999.
+        flags:
+          $ref: '#/components/schemas/UserFlags'
+        id:
+          type: integer
+          format: int64
           description: The snowflake ID of the user.
         username:
           type: string
-          minLength: 2
-          maxLength: 32
           description: The username of the user.
-        discriminator:
-          type: integer
-          minimum: 0
-          maximum: 9999
-          description: The discriminator of the user.
-        avatar:
-          type: string
-          format: url
-          nullable: true
-          description: The URL of the user's avatar.
-        banner:
-          type: string
-          format: url
-          nullable: true
-          description: The URL of the user's banner.
-        bio:
-          type: string
-          nullable: true
-          description: The bio of the user.
-        flags:
-          type: integer
-          format: int32
-          description: A bitmask of information associated with this user.
-    Relationship:
-      type: object
-      required: [id, type]
-      properties:
-        id:
-          $ref: "#/components/schemas/Snowflake"
-          description: The ID of the user that this relationship is with.
-        type:
-          type: string
-          enum: [friend, blocked]
-          description: The type of the relationship.
-    ClientUser:
-      type: object
-      required: [email, relationships]
-      allOf:
-        - $ref: "#/components/schemas/User"
-        - properties:
-            email:
-              type: string
-              format: email
-              description: The associated email of the client's account. If the client is a bot, this is null.
-              nullable: true
-            relationships:
-              type: array
-              items:
-                $ref: "#/components/schemas/Relationship"
-              description: An array of relationships that the client has with other users.
-
-    # Errors
-    NotFound:
-      type: object
-      required: [entity, message]
-      description: The requested resource was not found.
-      properties:
-        entity:
-          type: string
-          description: The type of item that couldn't be found.
-        message:
-          type: string
-          description: The error message.
-    InvalidToken:
-      type: object
-      required: [message]
-      description: An invalid token was provided, or it wasn't provided at all.
-      properties:
-        message:
-          type: string
-          description: The error message.
-    InvalidCredentials:
-      type: object
-      required: [what, message]
-      description: The provided credentials were invalid.
-      properties:
-        what:
-          type: string
-          description: Which credential was invalid.
-        message:
-          type: string
-          description: The error message.
-    InvalidField:
-      type: object
-      required: [field, message]
-      description: Invalid field in the request body.
-      properties:
-        field:
-          type: string
-          description: The name of the field that was invalid.
-        message:
-          type: string
-          description: The error message.
-    AlreadyTaken:
-      type: object
-      required: [what, message]
-      description: The requested resource (e.g. username or email) is already taken.
-      properties:
-        what:
-          type: string
-          description: The type of item that was already taken.
-        message:
-          type: string
-          description: The error message.
-paths:
-  /:
-    get:
-      summary: Hello World
-      description: Returns a hello world message
-      responses:
-        200:
-          description: The server is running properly.
-          content:
-            text/plain:
-              schema:
-                type: string
-                example: Hello from Adapt
-  /users/me:
-    get:
-      summary: Get Self
-      description: Returns the client's user object.
-      responses:
-        200:
-          description: The client's user object.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ClientUser"
-        401:
-          description: The client is not authenticated.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InvalidToken"
-    patch:
-      summary: Edit User
-      description: Edits properties of the authenticated user.
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                username:
-                  type: string
-                  minLength: 2
-                  maxLength: 32
-                  description: The new username of the user.
-                avatar:
-                  type: string
-                  format: url
-                  nullable: true
-                  description: The new avatar of the user.
-                banner:
-                  type: string
-                  format: url
-                  nullable: true
-                  description: The new banner of the user.
-                bio:
-                  type: string
-                  nullable: true
-                  description: The new bio of the user.
-      responses:
-        200:
-          description: The updated user.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/User"
-        400:
-          description: The request body was invalid.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InvalidField"
-        401:
-          description: The client is not authenticated.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InvalidToken"
-        409:
-          description: The username or email is already taken.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AlreadyTaken"
-    post:
-      summary: Create User
-      description: Creates a new user.
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [username, email, password]
-              properties:
-                username:
-                  type: string
-                  minLength: 2
-                  maxLength: 32
-                  description: The username of the user.
-                email:
-                  type: string
-                  format: email
-                  description: The email of the user.
-                password:
-                  type: string
-                  minLength: 8
-                  maxLength: 32
-                  description: The password of the user.
-      responses:
-        200:
-          description: The user ID and token of the created user.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [id, token]
-                properties:
-                  id:
-                    $ref: "#/components/schemas/Snowflake"
-                    description: The snowflake ID of the user.
-                  token:
-                    type: string
-                    description: The token of the user, used for authentication.
-        400:
-          description: The request body was invalid.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InvalidField"
-        409:
-          description: The username or email is already taken.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AlreadyTaken"
-    delete:
-      summary: Delete User
-      description: Deletes the authenticated user.
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [password]
-              properties:
-                password:
-                  type: string
-                  minLength: 8
-                  maxLength: 32
-                  description: The password of the user.
-      responses:
-        204:
-          description: The user was deleted.
-        401:
-          description: The client is not authenticated.
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: "#/components/schemas/InvalidToken"
-                  - $ref: "#/components/schemas/"
-  /users/{id}:
-    get:
-      summary: Get User
-      description: Gets a user by their ID.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: The ID of the user.
-          schema:
-            $ref: "#/components/schemas/Snowflake"
-      responses:
-        200:
-          description: The user.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/User"
-        401:
-          description: The client is not authenticated.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InvalidToken"
-        404:
-          description: The user was not found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NotFound"
-  /login:
-    post:
-      summary: Generate Token (Login)
-      description: Given their credentials, retrieves an authentication token for the user.
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [username, password]
-              properties:
-                username:
-                  type: string
-                  minLength: 2
-                  maxLength: 32
-                  description: The email of the user's account.
-                password:
-                  type: string
-                  minLength: 6
-                  maxLength: 32
-                  description: The password used to log in.
-                method:
-                  type: string
-                  enum: [new, revoke, reuse]
-                  default: reuse
-                  description: The method to use to retrieve an authentication token.
-      responses:
-        200:
-          description: The user ID and token of the user.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [id, token]
-                properties:
-                  id:
-                    $ref: "#/components/schemas/Snowflake"
-                    description: The snowflake ID of the user.
-                  token:
-                    type: string
-                    description: The token of the user, used for authentication.
-        400:
-          description: The request body was invalid.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InvalidField"
-        401:
-          description: The credentials were invalid.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InvalidCredentials"
+  securitySchemes:
+    token:
+      type: apiKey
+      in: header
+      name: Authorization
+tags:
+- name: Adapt REST API
+  description: Public REST API for the Adapt chat platform
