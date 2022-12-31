@@ -63,9 +63,6 @@ use utoipa::{Modify, OpenApi};
         essence::Error,
     )),
     modifiers(&Security),
-    tags(
-        (name = "Adapt REST API", description = "Public REST API for the Adapt chat platform")
-    ),
 )]
 pub struct ApiSpec;
 

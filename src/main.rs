@@ -32,7 +32,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .await?;
     essence::auth::configure_hasher(include_bytes!("../secret.key")).await;
 
-    tokio::fs::write("openapi.yml", openapi::ApiSpec::openapi().to_yaml()?).await?;
+    // Update OpenAPI spec
+    let mut spec = openapi::ApiSpec::openapi();
+    spec.info.title = "Adapt REST API".to_string();
+    spec.info.description = Some("Public REST API for the Adapt chat platform".to_string());
+    tokio::fs::write("openapi.yml", spec.to_yaml()?).await?;
 
     let router = Router::new()
         .route("/", get(|| async { (StatusCode::OK, "Hello from Adapt") }))

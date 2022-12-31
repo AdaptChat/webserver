@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
-  title: webserver
-  description: Serves Adapt's public REST API.
+  title: Adapt REST API
+  description: Public REST API for the Adapt chat platform
   contact:
     name: ''
     email: ''
@@ -1519,6 +1519,3 @@ components:
       type: apiKey
       in: header
       name: Authorization
-tags:
-- name: Adapt REST API
-  description: Public REST API for the Adapt chat platform
