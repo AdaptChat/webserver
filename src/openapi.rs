@@ -56,6 +56,7 @@ use utoipa::{Modify, OpenApi};
         models::MessageInfo,
         models::MemberOrUser,
         models::Message,
+        models::MessageFlags,
         models::PermissionPair,
         models::Role,
         models::RoleFlags,

@@ -690,11 +690,23 @@ components:
       description: The payload sent to edit a guild.
       properties:
         banner:
-          $ref: '#/components/schemas/Maybe'
+          type: integer
+          format: int64
+          description: |-
+            The new banner URL of the guild. Leave empty to keep the current banner, and set to `null`
+            to remove the banner.
         description:
-          $ref: '#/components/schemas/Maybe'
+          type: integer
+          format: int64
+          description: |-
+            The new description of the guild. Leave empty to keep the current description, and set to
+            `null` to remove the description.
         icon:
-          $ref: '#/components/schemas/Maybe'
+          type: integer
+          format: int64
+          description: |-
+            The new icon URL of the guild. Leave empty to keep the current icon, and set to `null` to
+            remove the icon.
         name:
           type: string
           description: The new name of the guild. Leave empty to keep the current name.
@@ -706,11 +718,23 @@ components:
       description: Payload sent when editing a user.
       properties:
         avatar:
-          $ref: '#/components/schemas/Maybe'
+          type: integer
+          format: int64
+          description: |-
+            The new avatar URL of the user. Leave empty to keep the current avatar, and set to `null` to
+            remove the avatar.
         banner:
-          $ref: '#/components/schemas/Maybe'
+          type: integer
+          format: int64
+          description: |-
+            The new banner URL of the user. Leave empty to keep the current banner, and set to `null` to
+            remove the banner.
         bio:
-          $ref: '#/components/schemas/Maybe'
+          type: integer
+          format: int64
+          description: |-
+            The new bio of the user. Leave empty to keep the current bio, and set to `null` to remove
+            the bio.
         username:
           type: string
           description: The new username of the user. Leave empty to keep the current username.
@@ -1424,6 +1448,9 @@ components:
       - Center
       - Right
       - Inline
+    MessageFlags:
+      type: integer
+      format: int32
     MessageInfo:
       oneOf:
       - type: object
