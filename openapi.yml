@@ -139,6 +139,111 @@ paths:
       deprecated: false
       security:
       - token: []
+    delete:
+      tags:
+      - guilds
+      summary: Delete Guild
+      description: |-
+        Delete Guild
+
+        Deletes the guild with the given ID. You must be the owner of the guild to delete it.
+      operationId: delete_guild
+      parameters:
+      - name: ''
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteGuildPayload'
+        required: false
+      responses:
+        '204':
+          description: Guild was successfully deleted
+        '401':
+          description: Invalid token or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: You are not the owner of the guild
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+    patch:
+      tags:
+      - guilds
+      summary: Edit Guild
+      description: |-
+        Edit Guild
+
+        Modifies details of the guild with the given ID. You must have `MANAGE_GUILD` permissions to
+        modify the guild. Returns the modified guild as a partial guild on success.
+      operationId: edit_guild
+      parameters:
+      - name: ''
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditGuildPayload'
+        required: true
+      responses:
+        '200':
+          description: Modified guild
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartialGuild'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: You do not have permission to modify the guild
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
   /login:
     post:
       tags:
@@ -874,6 +979,45 @@ components:
             type: string
             enum:
             - not_member
+      - type: object
+        description: You must be the owner of the guild to perform the requested action.
+        required:
+        - guild_id
+        - message
+        - type
+        properties:
+          guild_id:
+            type: integer
+            format: int64
+            description: The ID of the guild you are not the owner of.
+          message:
+            type: string
+            description: The error message.
+          type:
+            type: string
+            enum:
+            - not_owner
+      - type: object
+        description: You are missing the required permissions to perform the requested action.
+        required:
+        - guild_id
+        - permissions
+        - message
+        - type
+        properties:
+          guild_id:
+            type: integer
+            format: int64
+            description: The ID of the guild you are missing permissions in.
+          message:
+            type: string
+            description: The error message.
+          permissions:
+            $ref: '#/components/schemas/Permissions'
+          type:
+            type: string
+            enum:
+            - missing_permissions
       - type: object
         description: Something was already taken, e.g. a username or email.
         required:

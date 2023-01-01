@@ -10,6 +10,8 @@ use utoipa::{Modify, OpenApi};
         guilds::create_guild,
         guilds::get_all_guilds,
         guilds::get_guild,
+        guilds::edit_guild,
+        guilds::delete_guild,
         users::create_user,
         users::get_client_user,
         users::get_user,
