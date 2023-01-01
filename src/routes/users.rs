@@ -60,6 +60,7 @@ fn validate_username(username: impl AsRef<str>) -> Result<(), Error> {
     responses(
         (status = CREATED, description = "User ID and token", body = CreateUserResponse),
         (status = BAD_REQUEST, description = "Invalid payload", body = Error),
+        (status = CONFLICT, description = "Username or email is already taken", body = Error),
     ),
 )]
 pub async fn create_user(payload: Json<CreateUserPayload>) -> RouteResult<CreateUserResponse> {
@@ -124,8 +125,9 @@ pub async fn get_client_user(Auth(id, _): Auth) -> RouteResult<ClientUser> {
     request_body = EditUserPayload,
     responses(
         (status = OK, description = "User object after modification", body = User),
-        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
         (status = BAD_REQUEST, description = "Invalid payload", body = Error),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = CONFLICT, description = "Username is already taken", body = Error),
     ),
     security(("token" = [])),
 )]

@@ -59,6 +59,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       deprecated: false
+      security:
+      - token: []
     post:
       tags:
       - guilds
@@ -196,6 +198,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '409':
+          description: Username or email is already taken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       deprecated: false
   /users/me:
     get:
@@ -290,6 +298,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '409':
+          description: Username is already taken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       deprecated: false
       security:
       - token: []
@@ -325,6 +339,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       deprecated: false
+      security:
+      - token: []
 components:
   schemas:
     Attachment:
