@@ -21,6 +21,7 @@ pub use response::Response;
 
 use axum::{http::StatusCode, routing::get, Router, Server};
 use std::net::SocketAddr;
+use tower_http::cors::CorsLayer;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -45,7 +46,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .merge(routes::auth::router())
         .merge(routes::guilds::router())
         .merge(routes::users::router())
-        .merge(SwaggerUi::new("/docs").url("/openapi.json", spec));
+        .merge(SwaggerUi::new("/docs").url("/openapi.json", spec))
+        .layer(CorsLayer::permissive());
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8077));
     Server::bind(&addr)
