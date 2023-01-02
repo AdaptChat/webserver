@@ -788,7 +788,9 @@ components:
         properties:
           icon:
             type: string
-            description: The URL of the icon of the channel, if any.
+            description: |-
+              The icon of the channel represented as a
+              [Data URI scheme](https://en.wikipedia.org/wiki/Data_URI_scheme), if any.
           topic:
             type: string
             description: The topic of the text channel, if any.
@@ -803,7 +805,9 @@ components:
         properties:
           icon:
             type: string
-            description: The URL of the icon of the channel, if any.
+            description: |-
+              The icon of the channel represented as a
+              [Data URI scheme](https://en.wikipedia.org/wiki/Data_URI_scheme), if any.
           topic:
             type: string
             description: The topic of the text channel, if any.
@@ -878,7 +882,9 @@ components:
             no description.
         icon:
           type: string
-          description: The icon URL for the guild. Must be a valid URL, or `None` to not set an icon.
+          description: |-
+            The icon for the guild. Must be a valid URL, or `None` to not set an icon. This should be
+            a [Data URI scheme](https://en.wikipedia.org/wiki/Data_URI_scheme) if provided.
         name:
           type: string
           description: The name of the guild. Must be between 2 and 100 characters.
@@ -1007,8 +1013,11 @@ components:
         icon:
           type: string
           description: |-
-            The new icon URL of the channel. Explicitly setting this to `None` will clear the icon.
+            The new icon of the channel. Explicitly setting this to `None` will clear the icon.
             Takes effect for all channels except for user DMs.
+
+            This should be a [Data URI scheme](https://en.wikipedia.org/wiki/Data_URI_scheme).
+          nullable: true
         name:
           type: string
           description: |-
@@ -1019,6 +1028,7 @@ components:
           description: |-
             The new topic or description of the channel. Explicitly setting this to `None` will clear
             the topic. Only takes effect for text-based channels in guilds, or group chats.
+          nullable: true
         user_limit:
           type: integer
           format: int32
@@ -1030,23 +1040,24 @@ components:
       description: The payload sent to edit a guild.
       properties:
         banner:
-          type: integer
-          format: int64
+          type: string
           description: |-
             The new banner URL of the guild. Leave empty to keep the current banner, and set to `null`
             to remove the banner.
+          nullable: true
         description:
-          type: integer
-          format: int64
+          type: string
           description: |-
             The new description of the guild. Leave empty to keep the current description, and set to
             `null` to remove the description.
+          nullable: true
         icon:
-          type: integer
-          format: int64
+          type: string
           description: |-
-            The new icon URL of the guild. Leave empty to keep the current icon, and set to `null` to
-            remove the icon.
+            The new icon of the guild. Leave empty to keep the current icon, and set to `null` to
+            remove the icon. The icon should be represented as a
+            [Data URI scheme](https://en.wikipedia.org/wiki/Data_URI_scheme).
+          nullable: true
         name:
           type: string
           description: The new name of the guild. Leave empty to keep the current name.
@@ -1058,23 +1069,24 @@ components:
       description: Payload sent when editing a user.
       properties:
         avatar:
-          type: integer
-          format: int64
+          type: string
           description: |-
-            The new avatar URL of the user. Leave empty to keep the current avatar, and set to `null` to
-            remove the avatar.
+            The new avatar of the user. Leave empty to keep the current avatar, and set to `null` to
+            remove the avatar. If provided, the avatar should be represented as a
+            [Data URI scheme](https://en.wikipedia.org/wiki/Data_URI_scheme).
+          nullable: true
         banner:
-          type: integer
-          format: int64
+          type: string
           description: |-
             The new banner URL of the user. Leave empty to keep the current banner, and set to `null` to
             remove the banner.
+          nullable: true
         bio:
-          type: integer
-          format: int64
+          type: string
           description: |-
             The new bio of the user. Leave empty to keep the current bio, and set to `null` to remove
             the bio.
+          nullable: true
         username:
           type: string
           description: The new username of the user. Leave empty to keep the current username.
@@ -1784,10 +1796,10 @@ components:
       type: string
       description: The alignment type of a message embed field.
       enum:
-      - Left
-      - Center
-      - Right
-      - Inline
+      - left
+      - center
+      - right
+      - inline
     MessageFlags:
       type: integer
       format: int32
