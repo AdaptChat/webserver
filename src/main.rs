@@ -52,6 +52,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/", get(|| async { (StatusCode::OK, "Hello from Adapt") }))
         .route("/teapot", get(|| async { StatusCode::IM_A_TEAPOT }))
         .merge(routes::auth::router())
+        .merge(routes::channels::router())
         .merge(routes::guilds::router())
         .merge(routes::users::router())
         .merge(SwaggerUi::new("/docs").url("/openapi.json", spec))

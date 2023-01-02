@@ -14,6 +14,142 @@ servers:
 - url: http://127.0.0.1:8077
   description: Local
 paths:
+  /channels/{channel_id}:
+    get:
+      tags:
+      - channels
+      summary: Get Channel
+      description: |-
+        Get Channel
+
+        Gets information about a channel given its ID. This includes guild channels, DM channels, and
+        group DM channels.
+      operationId: get_channel
+      parameters:
+      - name: ''
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: Channel information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+    delete:
+      tags:
+      - channels
+      summary: Delete Channel
+      description: |-
+        Delete Channel
+
+        Deletes a channel. For guild channels, you must have the `MANAGE_CHANNELS` permission to use
+        this endpoint. For standard DM channels, you must be a recipient of the DM. For group DM
+        channels, you must be the owner of the group DM.
+      operationId: delete_channel
+      parameters:
+      - name: ''
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '204':
+          description: Channel deleted
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+    patch:
+      tags:
+      - channels
+      summary: Edit Channel
+      description: |-
+        Edit Channel
+
+        Edits a channel with the given payload.
+        For guild channels, you must have the `MODIFY_CHANNELS` permission to use this endpoint.
+      operationId: edit_channel
+      parameters:
+      - name: ''
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditChannelPayload'
+        required: true
+      responses:
+        '200':
+          description: Channel with updated details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
   /guilds:
     get:
       tags:
@@ -92,6 +228,102 @@ paths:
       deprecated: false
       security:
       - token: []
+  /guilds/{guild_id}/channels:
+    get:
+      tags:
+      - channels
+      summary: Get Guild Channels
+      description: |-
+        Get Guild Channels
+
+        Returns a list of all channels in the guild.
+      operationId: get_guild_channels
+      parameters:
+      - name: ''
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: Array of guild channels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GuildChannel'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+    post:
+      tags:
+      - channels
+      summary: Create Guild Channel
+      description: |-
+        Create Guild Channel
+
+        Creates a new channel in the guild with the given payload. You must have the `MANAGE_CHANNELS`
+        permission to use this endpoint.
+      operationId: create_guild_channel
+      parameters:
+      - name: ''
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGuildChannelPayload'
+        required: true
+      responses:
+        '201':
+          description: Channel was successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
   /guilds/{id}:
     get:
       tags:
@@ -547,6 +779,89 @@ components:
       description: |-
         Represents user info about the client. This has other information that is not available to the
         public, such as emails, guilds, and relationships (friends and blocked users).
+    CreateGuildChannelInfo:
+      oneOf:
+      - type: object
+        description: A text channel.
+        required:
+        - type
+        properties:
+          icon:
+            type: string
+            description: The URL of the icon of the channel, if any.
+          topic:
+            type: string
+            description: The topic of the text channel, if any.
+          type:
+            type: string
+            enum:
+            - Text
+      - type: object
+        description: An announcement channel.
+        required:
+        - type
+        properties:
+          icon:
+            type: string
+            description: The URL of the icon of the channel, if any.
+          topic:
+            type: string
+            description: The topic of the text channel, if any.
+          type:
+            type: string
+            enum:
+            - Announcement
+      - type: object
+        description: A voice channel.
+        required:
+        - type
+        properties:
+          icon:
+            type: string
+            description: The URL of the icon of the channel, if any.
+          type:
+            type: string
+            enum:
+            - Voice
+          user_limit:
+            type: integer
+            format: int32
+            description: |-
+              The user limit of the channel. This should be a value between `0` and `500`. A value
+              of `0` is the default and indicates the absence of a user limit.
+      - type: object
+        required:
+        - type
+        properties:
+          type:
+            type: string
+            enum:
+            - Category
+      description: The type and other information sent to create a new guild channel.
+      discriminator:
+        propertyName: type
+    CreateGuildChannelPayload:
+      allOf:
+      - $ref: '#/components/schemas/CreateGuildChannelInfo'
+      - type: object
+        required:
+        - name
+        properties:
+          icon:
+            type: string
+            description: The icon of the text channel, if any.
+          name:
+            type: string
+            description: The name of the text channel.
+          overwrites:
+            type: array
+            items:
+              $ref: '#/components/schemas/PermissionOverwrite'
+          parent_id:
+            type: integer
+            format: int64
+            description: The ID of the category to create the channel in, if any.
+      description: The request body sent to create a new channel in a guild.
     CreateGuildPayload:
       type: object
       description: The payload sent to create a new guild.
@@ -685,6 +1000,31 @@ components:
       description: Represents extra information associated with DM channels.
       discriminator:
         propertyName: type
+    EditChannelPayload:
+      type: object
+      description: The request body sent to modify a channel.
+      properties:
+        icon:
+          type: string
+          description: |-
+            The new icon URL of the channel. Explicitly setting this to `None` will clear the icon.
+            Takes effect for all channels except for user DMs.
+        name:
+          type: string
+          description: |-
+            The new name of the channel. If left blank, the name will not be changed. Takes effect for
+            all channels except for user DMs.
+        topic:
+          type: string
+          description: |-
+            The new topic or description of the channel. Explicitly setting this to `None` will clear
+            the topic. Only takes effect for text-based channels in guilds, or group chats.
+        user_limit:
+          type: integer
+          format: int32
+          description: |-
+            The new user limit of the voice channel. Explicitly setting this to `0` will remove the
+            current limit, if there is any. Only takes effect for guild voice channels.
     EditGuildPayload:
       type: object
       description: The payload sent to edit a guild.

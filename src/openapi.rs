@@ -1,4 +1,4 @@
-use crate::routes::{auth, guilds, users};
+use crate::routes::{auth, channels, guilds, users};
 use essence::{http, models};
 use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityScheme};
 use utoipa::{Modify, OpenApi};
@@ -7,20 +7,28 @@ use utoipa::{Modify, OpenApi};
 #[openapi(
     paths(
         auth::login,
-        guilds::create_guild,
-        guilds::get_all_guilds,
-        guilds::get_guild,
-        guilds::edit_guild,
-        guilds::delete_guild,
         users::create_user,
         users::get_client_user,
         users::get_user,
         users::edit_user,
         users::delete_user,
+        guilds::create_guild,
+        guilds::get_all_guilds,
+        guilds::get_guild,
+        guilds::edit_guild,
+        guilds::delete_guild,
+        channels::create_guild_channel,
+        channels::get_guild_channels,
+        channels::get_channel,
+        channels::edit_channel,
+        channels::delete_channel,
     ),
     components(schemas(
         http::auth::LoginRequest,
         http::auth::LoginResponse,
+        http::channel::CreateGuildChannelPayload,
+        http::channel::CreateGuildChannelInfo,
+        http::channel::EditChannelPayload,
         http::auth::TokenRetrievalMethod,
         http::guild::CreateGuildPayload,
         http::guild::EditGuildPayload,
