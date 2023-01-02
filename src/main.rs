@@ -6,10 +6,12 @@
     clippy::similar_names
 )]
 #![feature(is_some_and)]
+#![feature(once_cell)]
 
 #[macro_use]
 extern crate dotenv_codegen;
 
+pub mod cdn;
 pub mod extract;
 mod openapi;
 pub mod ratelimit;
@@ -33,6 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ))
     .await?;
     essence::auth::configure_hasher(include_bytes!("../secret.key")).await;
+    cdn::setup()?;
 
     // Generate OpenAPI spec
     let mut spec = openapi::ApiSpec::openapi();

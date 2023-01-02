@@ -1,4 +1,5 @@
 use crate::{
+    cdn::upload_user_avatar,
     extract::{Auth, Json},
     ratelimit,
     routes::{NoContentResult, RouteResult},
@@ -17,7 +18,7 @@ use essence::{
     http::user::{CreateUserPayload, CreateUserResponse, DeleteUserPayload, EditUserPayload},
     models::{ClientUser, ModelType, User, UserFlags},
     snowflake::generate_snowflake,
-    Error, NotFoundExt,
+    Error, Maybe, NotFoundExt,
 };
 
 fn validate_username(username: impl AsRef<str>) -> Result<(), Error> {
@@ -133,10 +134,13 @@ pub async fn get_client_user(Auth(id, _): Auth) -> RouteResult<ClientUser> {
 )]
 pub async fn edit_user(
     Auth(id, _): Auth,
-    Json(payload): Json<EditUserPayload>,
+    Json(mut payload): Json<EditUserPayload>,
 ) -> RouteResult<User> {
     if let Some(ref username) = payload.username {
         validate_username(username)?;
+    }
+    if let Maybe::Value(ref mut avatar) = payload.avatar {
+        *avatar = upload_user_avatar(id, avatar).await?;
     }
 
     get_pool()
