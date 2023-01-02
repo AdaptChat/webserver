@@ -768,6 +768,7 @@ components:
         properties:
           email:
             type: string
+            format: email
             description: |-
               The associated email of the client's account.
 
@@ -901,9 +902,11 @@ components:
       properties:
         email:
           type: string
+          format: email
           description: The email of the user. Must be a valid email address.
         password:
           type: string
+          format: password
           description: The password of the user. Must be between 8 and 32 characters.
         username:
           type: string
@@ -941,6 +944,7 @@ components:
       properties:
         password:
           type: string
+          format: password
           description: The password of the user.
     DmChannel:
       allOf:
@@ -1012,6 +1016,7 @@ components:
       properties:
         icon:
           type: string
+          format: byte
           description: |-
             The new icon of the channel. Explicitly setting this to `None` will clear the icon.
             Takes effect for all channels except for user DMs.
@@ -1053,6 +1058,7 @@ components:
           nullable: true
         icon:
           type: string
+          format: byte
           description: |-
             The new icon of the guild. Leave empty to keep the current icon, and set to `null` to
             remove the icon. The icon should be represented as a
@@ -1070,6 +1076,7 @@ components:
       properties:
         avatar:
           type: string
+          format: byte
           description: |-
             The new avatar of the user. Leave empty to keep the current avatar, and set to `null` to
             remove the avatar. If provided, the avatar should be represented as a
@@ -1649,6 +1656,7 @@ components:
           $ref: '#/components/schemas/TokenRetrievalMethod'
         password:
           type: string
+          format: password
           description: The password to log in with.
     LoginResponse:
       type: object
