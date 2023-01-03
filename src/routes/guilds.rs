@@ -109,7 +109,7 @@ pub async fn get_all_guilds(
 /// it.
 #[utoipa::path(
     get,
-    path = "/guilds/{id}",
+    path = "/guilds/{guild_id}",
     responses(
         (status = OK, description = "Guild object", body = Guild),
         (status = UNAUTHORIZED, description = "Invalid token", body = Error),
@@ -140,7 +140,7 @@ pub async fn get_guild(
 /// modify the guild. Returns the modified guild as a partial guild on success.
 #[utoipa::path(
     patch,
-    path = "/guilds/{id}",
+    path = "/guilds/{guild_id}",
     request_body = EditGuildPayload,
     responses(
         (status = OK, description = "Modified guild", body = PartialGuild),
@@ -176,7 +176,7 @@ pub async fn edit_guild(
 /// Deletes the guild with the given ID. You must be the owner of the guild to delete it.
 #[utoipa::path(
     delete,
-    path = "/guilds/{id}",
+    path = "/guilds/{guild_id}",
     request_body = Option<DeleteGuildPayload>,
     responses(
         (status = NO_CONTENT, description = "Guild was successfully deleted"),
@@ -220,7 +220,7 @@ pub fn router() -> Router {
             get(get_all_guilds.layer(ratelimit!(1, 5))).post(create_guild.layer(ratelimit!(2, 15))),
         )
         .route(
-            "/guilds/:id",
+            "/guilds/:guild_id",
             get(get_guild.layer(ratelimit!(3, 12)))
                 .patch(edit_guild.layer(ratelimit!(3, 12)))
                 .delete(delete_guild.layer(ratelimit!(2, 20))),

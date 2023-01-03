@@ -194,16 +194,16 @@ pub async fn delete_user(
 /// Fetches information about a user by their ID.
 #[utoipa::path(
     get,
-    path = "/users/{id}",
+    path = "/users/{user_id}",
     responses(
         (status = OK, description = "User object", body = User),
         (status = NOT_FOUND, description = "User not found", body = Error),
     ),
     security(("token" = [])),
 )]
-pub async fn get_user(_auth: Auth, Path(id): Path<u64>) -> RouteResult<User> {
+pub async fn get_user(_auth: Auth, Path(user_id): Path<u64>) -> RouteResult<User> {
     let user = get_pool()
-        .fetch_user_by_id(id)
+        .fetch_user_by_id(user_id)
         .await?
         .ok_or_not_found("user", "user not found")?;
 
@@ -219,5 +219,5 @@ pub fn router() -> Router {
                 .patch(edit_user.layer(ratelimit!(3, 15)))
                 .delete(delete_user.layer(ratelimit!(2, 30))),
         )
-        .route("/users/:id", get(get_user.layer(ratelimit!(3, 5))))
+        .route("/users/:user_id", get(get_user.layer(ratelimit!(3, 5))))
 }

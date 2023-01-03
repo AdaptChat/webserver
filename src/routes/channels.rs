@@ -248,12 +248,12 @@ pub async fn delete_channel(
 pub fn router() -> Router {
     Router::new()
         .route(
-            "/guilds/:id/channels",
+            "/guilds/:guild_id/channels",
             get(get_guild_channels.layer(ratelimit!(3, 6)))
                 .post(create_guild_channel.layer(ratelimit!(3, 10))),
         )
         .route(
-            "/channels/:id",
+            "/channels/:channel_id",
             get(get_channel.layer(ratelimit!(4, 6)))
                 .patch(edit_channel.layer(ratelimit!(3, 10)))
                 .delete(delete_channel.layer(ratelimit!(3, 10))),

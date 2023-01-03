@@ -29,3 +29,6 @@ tower = { version = "0.4", features = ["buffer"] }
 tower-http = { version = "0.3", features = ["cors"] }
 utoipa = { git = "https://github.com/juhaku/utoipa", features = ["axum_extras", "chrono", "yaml"] }
 utoipa-swagger-ui = { git = "https://github.com/juhaku/utoipa", features = ["axum"] }
+
+[patch."https://github.com/juhaku/utoipa"]
+utoipa-gen = { git = "https://github.com/jay3332/utoipa", branch = "patch-1" }

@@ -26,7 +26,7 @@ paths:
         group DM channels.
       operationId: get_channel
       parameters:
-      - name: ''
+      - name: channel_id
         in: path
         required: true
         deprecated: false
@@ -65,7 +65,7 @@ paths:
         channels, you must be the owner of the group DM.
       operationId: delete_channel
       parameters:
-      - name: ''
+      - name: channel_id
         in: path
         required: true
         deprecated: false
@@ -105,7 +105,7 @@ paths:
         For guild channels, you must have the `MODIFY_CHANNELS` permission to use this endpoint.
       operationId: edit_channel
       parameters:
-      - name: ''
+      - name: channel_id
         in: path
         required: true
         deprecated: false
@@ -228,103 +228,7 @@ paths:
       deprecated: false
       security:
       - token: []
-  /guilds/{guild_id}/channels:
-    get:
-      tags:
-      - channels
-      summary: Get Guild Channels
-      description: |-
-        Get Guild Channels
-
-        Returns a list of all channels in the guild.
-      operationId: get_guild_channels
-      parameters:
-      - name: ''
-        in: path
-        required: true
-        deprecated: false
-        schema:
-          type: integer
-          format: int64
-      responses:
-        '200':
-          description: Array of guild channels
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/GuildChannel'
-        '401':
-          description: Invalid token
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Guild not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      deprecated: false
-    post:
-      tags:
-      - channels
-      summary: Create Guild Channel
-      description: |-
-        Create Guild Channel
-
-        Creates a new channel in the guild with the given payload. You must have the `MANAGE_CHANNELS`
-        permission to use this endpoint.
-      operationId: create_guild_channel
-      parameters:
-      - name: ''
-        in: path
-        required: true
-        deprecated: false
-        schema:
-          type: integer
-          format: int64
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateGuildChannelPayload'
-        required: true
-      responses:
-        '201':
-          description: Channel was successfully created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Channel'
-        '400':
-          description: Invalid payload
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Invalid token
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Missing permissions
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Guild not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      deprecated: false
-  /guilds/{id}:
+  /guilds/{guild_id}:
     get:
       tags:
       - guilds
@@ -336,7 +240,7 @@ paths:
         it.
       operationId: get_guild
       parameters:
-      - name: ''
+      - name: guild_id
         in: path
         required: true
         deprecated: false
@@ -381,7 +285,7 @@ paths:
         Deletes the guild with the given ID. You must be the owner of the guild to delete it.
       operationId: delete_guild
       parameters:
-      - name: ''
+      - name: guild_id
         in: path
         required: true
         deprecated: false
@@ -429,7 +333,7 @@ paths:
         modify the guild. Returns the modified guild as a partial guild on success.
       operationId: edit_guild
       parameters:
-      - name: ''
+      - name: guild_id
         in: path
         required: true
         deprecated: false
@@ -476,6 +380,102 @@ paths:
       deprecated: false
       security:
       - token: []
+  /guilds/{guild_id}/channels:
+    get:
+      tags:
+      - channels
+      summary: Get Guild Channels
+      description: |-
+        Get Guild Channels
+
+        Returns a list of all channels in the guild.
+      operationId: get_guild_channels
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: Array of guild channels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GuildChannel'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+    post:
+      tags:
+      - channels
+      summary: Create Guild Channel
+      description: |-
+        Create Guild Channel
+
+        Creates a new channel in the guild with the given payload. You must have the `MANAGE_CHANNELS`
+        permission to use this endpoint.
+      operationId: create_guild_channel
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGuildChannelPayload'
+        required: true
+      responses:
+        '201':
+          description: Channel was successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
   /login:
     post:
       tags:
@@ -644,7 +644,7 @@ paths:
       deprecated: false
       security:
       - token: []
-  /users/{id}:
+  /users/{user_id}:
     get:
       tags:
       - users
@@ -655,7 +655,7 @@ paths:
         Fetches information about a user by their ID.
       operationId: get_user
       parameters:
-      - name: ''
+      - name: user_id
         in: path
         required: true
         deprecated: false
