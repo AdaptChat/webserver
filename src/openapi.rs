@@ -1,4 +1,4 @@
-use crate::routes::{auth, channels, guilds, users};
+use crate::routes::{auth, channels, guilds, roles, users};
 use essence::{http, models};
 use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityScheme};
 use utoipa::{Modify, OpenApi};
@@ -22,6 +22,8 @@ use utoipa::{Modify, OpenApi};
         channels::get_channel,
         channels::edit_channel,
         channels::delete_channel,
+        roles::get_roles,
+        roles::get_role,
     ),
     components(schemas(
         http::auth::LoginRequest,

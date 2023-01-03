@@ -476,6 +476,109 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       deprecated: false
+  /guilds/{guild_id}/roles:
+    get:
+      tags:
+      - roles
+      summary: Get All Roles
+      description: |-
+        Get All Roles
+
+        Fetches information for all roles in the guild with the given ID.
+        You must be a member of the guild.
+      operationId: get_roles
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: Array of role objects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Role'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: You are not a member of the guild
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+  /guilds/{guild_id}/roles/{role_id}:
+    get:
+      tags:
+      - roles
+      summary: Get Role
+      description: |-
+        Get Role
+
+        Fetches information for the role with the given ID in the given guild. You must be a member of
+        the guild the role belongs to.
+      operationId: get_role
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      - name: role_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: Role object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: You are not a member of the guild
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild or role not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
   /login:
     post:
       tags:

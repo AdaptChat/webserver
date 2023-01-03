@@ -145,7 +145,11 @@ pub async fn get_guild(
     responses(
         (status = OK, description = "Modified guild", body = PartialGuild),
         (status = UNAUTHORIZED, description = "Invalid token", body = Error),
-        (status = FORBIDDEN, description = "You do not have permission to modify the guild", body = Error),
+        (
+            status = FORBIDDEN,
+            description = "You do not have permission to modify the guild",
+            body = Error,
+        ),
         (status = NOT_FOUND, description = "Guild not found", body = Error),
         (status = BAD_REQUEST, description = "Invalid payload", body = Error),
     ),
