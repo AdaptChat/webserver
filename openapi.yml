@@ -525,6 +525,56 @@ paths:
       deprecated: false
       security:
       - token: []
+    post:
+      tags:
+      - roles
+      summary: Create Role
+      description: |-
+        Create Role
+
+        Creates a role in the guild with the given guild ID. You must have the `MANAGE_ROLES` permission
+        to create roles.
+      operationId: create_role
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '201':
+          description: Role object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: |-
+            You are forbidden from creating the roles. This can be because:
+            * You are not a member of the guild.
+            * You do not have the `MANAGE_ROLES` permission in the guild.
+            * You are creating a role that allows or denies permissions you do not have.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
   /guilds/{guild_id}/roles/{role_id}:
     get:
       tags:
@@ -572,6 +622,54 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Guild or role not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+    delete:
+      tags:
+      - roles
+      summary: Delete Role
+      description: |-
+        Delete Role
+
+        Deletes the role with the given ID in the given guild. You must have the `MANAGE_ROLES`
+        permission, the role cannot be managed, and the role must be lower than your highest role.
+      operationId: delete_role
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      - name: role_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '204':
+          description: Role deleted
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: |-
+            You are forbidden from deleting the role. This can be because:
+            * You are not a member of the guild.
+            * You do not have the `MANAGE_ROLES` permission in the guild.
+            * The role is managed.
+            * The role is higher than your highest role.
           content:
             application/json:
               schema:
@@ -1484,6 +1582,40 @@ components:
             enum:
             - not_owner
       - type: object
+        description: You are too low in the role hierarchy to perform the requested action.
+        required:
+        - guild_id
+        - top_role_position
+        - desired_position
+        - message
+        - type
+        properties:
+          desired_position:
+            type: integer
+            format: int32
+            description: The desired position your top role should be in the role hierarchy.
+          guild_id:
+            type: integer
+            format: int64
+            description: The ID of the guild you are not the owner of.
+          message:
+            type: string
+            description: The error message.
+          top_role_id:
+            type: integer
+            format: int64
+            description: |-
+              The ID of your top role. This is the role you possess with the highest position.
+              This is `None` if you have no roles (the default role).
+          top_role_position:
+            type: integer
+            format: int32
+            description: The position of your top role.
+          type:
+            type: string
+            enum:
+            - role_too_low
+      - type: object
         description: You are missing the required permissions to perform the requested action.
         required:
         - guild_id
@@ -1504,6 +1636,29 @@ components:
             type: string
             enum:
             - missing_permissions
+      - type: object
+        description: You are trying to delete a managed role.
+        required:
+        - guild_id
+        - role_id
+        - message
+        - type
+        properties:
+          guild_id:
+            type: integer
+            format: int64
+            description: The ID of the guild the role is in.
+          message:
+            type: string
+            description: The error message.
+          role_id:
+            type: integer
+            format: int64
+            description: The ID of the role that is managed.
+          type:
+            type: string
+            enum:
+            - role_is_managed
       - type: object
         description: Something was already taken, e.g. a username or email.
         required:

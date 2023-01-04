@@ -24,6 +24,8 @@ use utoipa::{Modify, OpenApi};
         channels::delete_channel,
         roles::get_roles,
         roles::get_role,
+        roles::create_role,
+        roles::delete_role,
     ),
     components(schemas(
         http::auth::LoginRequest,
