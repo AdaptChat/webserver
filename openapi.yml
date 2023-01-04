@@ -543,6 +543,12 @@ paths:
         schema:
           type: integer
           format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRolePayload'
+        required: true
       responses:
         '201':
           description: Role object
@@ -670,6 +676,70 @@ paths:
             * You do not have the `MANAGE_ROLES` permission in the guild.
             * The role is managed.
             * The role is higher than your highest role.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+    patch:
+      tags:
+      - roles
+      summary: Edit Role
+      description: |-
+        Edit Role
+
+        Modifies the role with the given ID in the given guild. You must have the `MANAGE_ROLES`
+        permission, and the role must be lower than your highest role.
+      operationId: edit_role
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      - name: role_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditRolePayload'
+        required: true
+      responses:
+        '200':
+          description: Modified role object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: |
+            You are forbidden from editing the role. This can be because:
+            * You are not a member of the guild.
+            * You do not have the `MANAGE_ROLES` permission in the guild.
+            * You are editing a role that allows or denies permissions you do not have.
+            * You are editing a role that is higher than your highest role.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild or role not found
           content:
             application/json:
               schema:
@@ -1093,6 +1163,27 @@ components:
         public:
           type: boolean
           description: Whether the guild should be public or not. Defaults to `false`.
+    CreateRolePayload:
+      type: object
+      description: Payload sent to create a new role in a guild.
+      required:
+      - name
+      properties:
+        color:
+          type: integer
+          format: int32
+          description: The color of the role. Leave empty for the default/inherited color.
+        hoisted:
+          type: boolean
+          description: Whether the role should be hoisted.
+        mentionable:
+          type: boolean
+          description: Whether the role should be mentionable by anyone.
+        name:
+          type: string
+          description: The name of the role.
+        permissions:
+          $ref: '#/components/schemas/PermissionPair'
     CreateUserPayload:
       type: object
       description: Payload sent to create a new user.
@@ -1271,6 +1362,28 @@ components:
         public:
           type: boolean
           description: Whether the guild should be public or not. Leave empty to keep the current setting.
+    EditRolePayload:
+      type: object
+      description: Payload sent to edit a role.
+      properties:
+        color:
+          type: integer
+          format: int32
+          description: |-
+            The color of the role. Set to `null` for the default/inherited color, and leave empty
+            to leave it alone
+          nullable: true
+        hoisted:
+          type: boolean
+          description: Whether the role should be hoisted.
+        mentionable:
+          type: boolean
+          description: Whether the role should be mentionable by anyone.
+        name:
+          type: string
+          description: The new name of the role, if any.
+        permissions:
+          $ref: '#/components/schemas/PermissionPair'
     EditUserPayload:
       type: object
       description: Payload sent when editing a user.
