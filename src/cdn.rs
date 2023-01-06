@@ -59,7 +59,7 @@ fn data_scheme_to_bytes(
 ) -> essence::Result<(Vec<u8>, String)> {
     let field = field.unwrap_or("unknown");
     let url = DataUrl::process(image_data).map_err(|_| Error::InvalidField {
-        field,
+        field: field.to_string(),
         message: "Invalid data scheme".to_string(),
     })?;
 
@@ -71,7 +71,7 @@ fn data_scheme_to_bytes(
     let mut ext = &*url.mime_type().subtype;
     if url.mime_type().type_ != "image" || !allowed.contains(&ext) {
         return Err(Error::InvalidField {
-            field,
+            field: field.to_string(),
             message: format!(
                 "Data scheme must be one of [image/png, image/jpeg{}]",
                 if accept_gifs { ", image/gif" } else { "" }
@@ -85,7 +85,7 @@ fn data_scheme_to_bytes(
     let bytes = url
         .decode_to_vec()
         .map_err(|_| Error::InvalidField {
-            field,
+            field: field.to_string(),
             message: "Invalid image data".to_string(),
         })?
         .0;
@@ -93,7 +93,7 @@ fn data_scheme_to_bytes(
     let size = bytes.len();
     if size > max_size {
         return Err(Error::InvalidField {
-            field,
+            field: field.to_string(),
             message: format!(
                 "Provided image is too large ({} > {})",
                 humanize_size(size),
@@ -117,7 +117,7 @@ async fn upload(
         .send()
         .await
         .map_err(|e| Error::InternalError {
-            what: Some("cdn"),
+            what: Some("cdn".to_string()),
             message: format!("Failed to upload image to CDN: {e}"),
             debug: Some(format!("{e:?}")),
         })?;
@@ -127,14 +127,14 @@ async fn upload(
         let text = response.text().await.unwrap_or_default();
 
         return Err(Error::InternalError {
-            what: Some("cdn"),
+            what: Some("cdn".to_string()),
             message: format!("CDN responded with a {status_code} status code: {text}"),
             debug: None,
         });
     }
 
     response.json().await.map_err(|e| Error::InternalError {
-        what: Some("cdn"),
+        what: Some("cdn".to_string()),
         message: format!("Failed to deserialize CDN response: {e}"),
         debug: Some(format!("{e:?}")),
     })

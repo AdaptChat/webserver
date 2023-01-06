@@ -36,14 +36,14 @@ pub async fn login(json: Json<LoginRequest>) -> RouteResult<LoginResponse> {
 
     if user.flags.contains(UserFlags::BOT) {
         return Err(Response::from(Error::UnsupportedAuthMethod {
-            message: "Bots cannot login with this method, use a bot token instead",
+            message: "Bots cannot login with this method, use a bot token instead".to_string(),
         }));
     }
 
     if !verify_password(password, user.password.take().unwrap_or_default()).await? {
         return Err(Response::from(Error::InvalidCredentials {
-            what: "password",
-            message: "Invalid password",
+            what: "password".to_string(),
+            message: "Invalid password".to_string(),
         }));
     }
 

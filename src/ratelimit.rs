@@ -123,8 +123,10 @@ where
             None => {
                 return Box::pin(async move {
                     Ok(Response::from(Error::MalformedIp {
-                        message: "Could not resolve an IP address from the request. \
-                                We require a valid IP address to protect us from DoS attacks.",
+                        message: String::from(
+                            "Could not resolve an IP address from the request. \
+                            We require a valid IP address to protect us from DoS attacks.",
+                        ),
                     })
                     .into_response())
                 });

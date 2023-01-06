@@ -16,7 +16,7 @@ use essence::{
 fn validate_role_name(name: &str) -> Result<(), Error> {
     if !(1..=32).contains(&name.chars().count()) {
         return Err(Error::InvalidField {
-            field: "name",
+            field: "name".to_string(),
             message: "Role name must be between 1 and 32 characters long".to_string(),
         });
     }
@@ -124,7 +124,9 @@ pub async fn create_role(
             guild_id,
             permissions: payload.permissions.allow.difference(member_permissions)
                 | payload.permissions.deny.difference(member_permissions),
-            message: "You cannot create a role that allows or denies permissions you do not have",
+            message: String::from(
+                "You cannot create a role that allows or denies permissions you do not have",
+            ),
         }));
     }
 
@@ -183,7 +185,9 @@ pub async fn edit_role(
                 guild_id,
                 permissions: permissions.allow.difference(member_permissions)
                     | permissions.deny.difference(member_permissions),
-                message: "You cannot edit a role to allow or deny permissions you do not have",
+                message: String::from(
+                    "You cannot edit a role to allow or deny permissions you do not have",
+                ),
             }));
         }
     }

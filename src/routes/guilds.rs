@@ -23,7 +23,7 @@ use essence::{
 pub fn validate_guild_name(name: &str) -> Result<(), Error> {
     if !(2..=100).contains(&name.chars().count()) {
         return Err(Error::InvalidField {
-            field: "name",
+            field: "name".to_string(),
             message: "Guild name must be between 2 and 100 characters long".to_string(),
         });
     }
@@ -35,7 +35,7 @@ pub fn validate_guild_name(name: &str) -> Result<(), Error> {
 pub fn validate_guild_description(description: &str) -> Result<(), Error> {
     if description.len() > 1024 {
         return Err(Error::InvalidField {
-            field: "description",
+            field: "description".to_string(),
             message: "Guild description must be at most 1 KB in size".to_string(),
         });
     }
@@ -201,14 +201,14 @@ pub async fn delete_guild(
     if !flags.contains(UserFlags::BOT) {
         let Json(DeleteGuildPayload { password }) = payload.ok_or_else(|| {
             Response::from(Error::MissingBody {
-                message: "Missing request body to delete guild",
+                message: "Missing request body to delete guild".to_string(),
             })
         })?;
 
         if !db.verify_password(user_id, password).await? {
             return Err(Response::from(Error::InvalidCredentials {
-                what: "password",
-                message: "Invalid password",
+                what: "password".to_string(),
+                message: "Invalid password".to_string(),
             }));
         }
     }

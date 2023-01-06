@@ -63,7 +63,7 @@ impl<T: Serialize> IntoResponse for Response<T> {
 #[inline]
 fn serialization_error(err: &(impl ToString + std::fmt::Debug)) -> AxumResponse {
     Response::from(Error::InternalError {
-        what: Some("serialization"),
+        what: Some("serialization".to_string()),
         message: err.to_string(),
         debug: Some(format!("{err:?}")),
     })

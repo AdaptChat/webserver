@@ -27,14 +27,14 @@ fn validate_username(username: impl AsRef<str>) -> Result<(), Error> {
 
     if length < 2 {
         return Err(Error::InvalidField {
-            field: "username",
+            field: "username".to_string(),
             message: "Username must be at least 2 characters long".to_string(),
         });
     }
 
     if length > 32 {
         return Err(Error::InvalidField {
-            field: "username",
+            field: "username".to_string(),
             message: "Username cannot be longer than 32 characters".to_string(),
         });
     }
@@ -42,7 +42,7 @@ fn validate_username(username: impl AsRef<str>) -> Result<(), Error> {
     for forbidden in ['\n', '\r', '#', '@'] {
         if username.contains(forbidden) {
             return Err(Error::InvalidField {
-                field: "username",
+                field: "username".to_string(),
                 message: format!("Username cannot contain {forbidden:?}"),
             });
         }
@@ -75,7 +75,7 @@ pub async fn create_user(payload: Json<CreateUserPayload>) -> RouteResult<Create
     let db = get_pool();
     if db.is_email_taken(&email).await? {
         return Err(Response::from(Error::AlreadyTaken {
-            what: "email",
+            what: "email".to_string(),
             message: "Email is already taken".to_string(),
         }));
     }
@@ -173,15 +173,17 @@ pub async fn delete_user(
 
     if flags.contains(UserFlags::BOT) {
         return Err(Response::from(Error::UnsupportedAuthMethod {
-            message: "This user is a bot account, but this endpoint can only delete user \
+            message: String::from(
+                "This user is a bot account, but this endpoint can only delete user \
                 accounts. To delete bot accounts, see the DELETE /bots/:id endpoint.",
+            ),
         }));
     }
 
     if !db.verify_password(id, password).await? {
         return Err(Response::from(Error::InvalidCredentials {
-            what: "password",
-            message: "Invalid password",
+            what: "password".to_string(),
+            message: "Invalid password".to_string(),
         }));
     }
 

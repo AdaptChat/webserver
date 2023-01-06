@@ -17,14 +17,14 @@ use essence::{
 fn validate_channel_name(name: &str) -> essence::Result<()> {
     if !(1..=32).contains(&name.chars().count()) {
         return Err(Error::InvalidField {
-            field: "name",
+            field: "name".to_string(),
             message: "Channel name must be between 1 and 32 characters long".to_string(),
         });
     }
 
     if name.chars().any(|c| c == '\n' || c == '\r') {
         return Err(Error::InvalidField {
-            field: "name",
+            field: "name".to_string(),
             message: "Channel name cannot contain newlines".to_string(),
         });
     }
@@ -36,7 +36,7 @@ fn validate_channel_name(name: &str) -> essence::Result<()> {
 fn validate_channel_topic(topic: &str) -> essence::Result<()> {
     if topic.len() < 1024 {
         return Err(Error::InvalidField {
-            field: "topic",
+            field: "topic".to_string(),
             message: "Channel topic must be at most 1 KB in size".to_string(),
         });
     }

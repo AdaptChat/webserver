@@ -28,11 +28,13 @@ where
             .headers
             .get("Authorization")
             .ok_or(Error::InvalidToken {
-                message: "missing `Authorization` header, which should contain the token",
+                message: String::from(
+                    "missing `Authorization` header, which should contain the token",
+                ),
             })?
             .to_str()
             .map_err(|_| Error::InvalidToken {
-                message: "Invalid Authorization header",
+                message: "Invalid Authorization header".to_string(),
             })?;
 
         let (id, flags) =
@@ -40,7 +42,7 @@ where
                 .fetch_user_info_by_token(token)
                 .await?
                 .ok_or(Error::InvalidToken {
-                    message: "Invalid authorization token",
+                    message: "Invalid authorization token".to_string(),
                 })?;
 
         Ok(Self(id, flags))
@@ -94,7 +96,7 @@ where
         let body = Bytes::from_request(req, state)
             .await
             .map_err(|err| Error::InternalError {
-                what: Some("deserialization"),
+                what: Some("deserialization".to_string()),
                 message: "failed to buffer request body".to_string(),
                 debug: Some(format!("{err:?}")),
             })?;
