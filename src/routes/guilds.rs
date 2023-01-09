@@ -124,7 +124,7 @@ pub async fn get_guild(
     Query(query): Query<GetGuildQuery>,
 ) -> RouteResult<Guild> {
     let db = get_pool();
-    db.assert_member_in_guild(guild_id, user_id).await?;
+    db.assert_invoker_in_guild(guild_id, user_id).await?;
 
     let guild = db
         .fetch_guild(guild_id, query)

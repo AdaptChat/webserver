@@ -114,7 +114,7 @@ pub async fn get_guild_channels(
     Path(guild_id): Path<u64>,
 ) -> RouteResult<Vec<GuildChannel>> {
     let db = get_pool();
-    db.assert_member_in_guild(guild_id, user_id).await?;
+    db.assert_invoker_in_guild(guild_id, user_id).await?;
 
     let channels = db.fetch_all_channels_in_guild(guild_id).await?;
     Ok(Response::ok(channels))
@@ -144,7 +144,7 @@ pub async fn get_channel(
         .ok_or_not_found("channel", format!("Channel with ID {channel_id} not found"))?
         .0
     {
-        db.assert_member_in_guild(guild_id, user_id).await?;
+        db.assert_invoker_in_guild(guild_id, user_id).await?;
     }
 
     let channel = db.fetch_channel(channel_id).await?.unwrap();

@@ -44,7 +44,7 @@ pub async fn get_roles(
     Path(guild_id): Path<u64>,
 ) -> RouteResult<Vec<Role>> {
     let db = get_pool();
-    db.assert_member_in_guild(guild_id, user_id).await?;
+    db.assert_invoker_in_guild(guild_id, user_id).await?;
 
     let roles = db.fetch_all_roles_in_guild(guild_id).await?;
     Ok(Response::ok(roles))
@@ -70,7 +70,7 @@ pub async fn get_role(
     Path((guild_id, role_id)): Path<(u64, u64)>,
 ) -> RouteResult<Role> {
     let db = get_pool();
-    db.assert_member_in_guild(guild_id, user_id).await?;
+    db.assert_invoker_in_guild(guild_id, user_id).await?;
 
     let role = db
         .fetch_role(guild_id, role_id)
