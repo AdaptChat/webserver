@@ -476,6 +476,366 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       deprecated: false
+  /guilds/{guild_id}/members:
+    get:
+      tags:
+      - members
+      summary: Get All Members
+      description: |-
+        Get All Members
+
+        Gets information of all members in a guild. You must be a member of the guild.
+      operationId: get_members
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: Array of member objects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Member'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: You are not a member of the guild
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+  /guilds/{guild_id}/members/me:
+    get:
+      tags:
+      - members
+      summary: Get Authenticated User as Member
+      description: |-
+        Get Authenticated User as Member
+
+        Gets information of the authenticated user as a member of a guild. You must be a member of the
+        guild.
+      operationId: get_client_member
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: Member object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: You are not a member of the guild
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+    delete:
+      tags:
+      - members
+      summary: Leave Guild
+      description: |-
+        Leave Guild
+
+        Leaves a guild. You must be a member of the guild beforehand. If you are the owner of the guild,
+        you must transfer ownership to another member before leaving.
+      operationId: leave_guild
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '204':
+          description: Success left the guild
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: You are the owner of the guild
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+    patch:
+      tags:
+      - members
+      summary: Edit Authenticated User as Member
+      description: |-
+        Edit Authenticated User as Member
+
+        Edits the authenticated user as a member of the given guild. You must be a member of the guild.
+        Parts of the payload require different permissions:
+        * The `nick` field requires the `CHANGE_NICKNAME` permission.
+      operationId: edit_client_member
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditClientMemberPayload'
+        required: true
+      responses:
+        '200':
+          description: Member object after modifications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: You are not a member of the guild
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+  /guilds/{guild_id}/members/{member_id}:
+    get:
+      tags:
+      - members
+      summary: Get Member
+      description: |-
+        Get Member
+
+        Gets information of a member in a guild. You must be a member of the guild.
+      operationId: get_member
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      - name: member_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: Member object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: You are not a member of the guild
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild or member not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+    delete:
+      tags:
+      - members
+      summary: Kick Member
+      description: |-
+        Kick Member
+
+        Kicks a member from a guild. You must be a member of the guild and have the `KICK_MEMBERS`
+        permission, and their highest role must be lower than yours.
+      operationId: kick_member
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      - name: member_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '204':
+          description: Member was kicked
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: |-
+            You are forbidden from editing the member. This can be because:
+            * You are not a member of the guild.
+            * You are missing permissions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild or member not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+    patch:
+      tags:
+      - members
+      summary: Edit Member
+      description: |-
+        Edit Member
+
+        Edits information of a member in a guild. Parts of the payload require different permissions:
+        * The `nick` field requires the `MANAGE_NICKNAMES` permission.
+        * The `roles` field requires the `MANAGE_ROLES` permission.
+
+        Returns the modified member object on success.
+      operationId: edit_member
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      - name: member_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditMemberPayload'
+        required: true
+      responses:
+        '200':
+          description: Member object after modifications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: |-
+            You are forbidden from editing the member. This can be because:
+            * You are not a member of the guild.
+            * You are missing permissions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild or member not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
   /guilds/{guild_id}/roles:
     get:
       tags:
@@ -1332,6 +1692,16 @@ components:
           description: |-
             The new user limit of the voice channel. Explicitly setting this to `0` will remove the
             current limit, if there is any. Only takes effect for guild voice channels.
+    EditClientMemberPayload:
+      type: object
+      description: The payload send to edit the authenticated user as a member.
+      properties:
+        nick:
+          type: string
+          description: |-
+            The new nickname of the member. Leave empty to keep the current nickname, and set to `null`
+            to remove the nickname.
+          nullable: true
     EditGuildPayload:
       type: object
       description: The payload sent to edit a guild.
@@ -1362,6 +1732,31 @@ components:
         public:
           type: boolean
           description: Whether the guild should be public or not. Leave empty to keep the current setting.
+    EditMemberPayload:
+      type: object
+      description: The payload sent to edit a member.
+      properties:
+        nick:
+          type: string
+          description: |-
+            The new nickname of the member. Leave empty to keep the current nickname, and set to `null`
+            to remove the nickname.
+          nullable: true
+        roles:
+          type: array
+          items:
+            type: integer
+            format: int64
+            description: |-
+              If provided, this is a bulk overwrite of the member's roles. Any roles not in this list
+              will be removed from the member, and any roles in this list that are managable by the
+              user will be added to the member (that is, if the role isn't managed and the user's top role
+              is higher than the role).
+
+              If any role is not found, a 404 will be returned.
+
+              The default role will always be added to the member, regardless of whether it is in this
+              list.
     EditRolePayload:
       type: object
       description: Payload sent to edit a role.
@@ -1698,6 +2093,7 @@ components:
         description: You are too low in the role hierarchy to perform the requested action.
         required:
         - guild_id
+        - top_role_id
         - top_role_position
         - desired_position
         - message
@@ -1717,9 +2113,7 @@ components:
           top_role_id:
             type: integer
             format: int64
-            description: |-
-              The ID of your top role. This is the role you possess with the highest position.
-              This is `None` if you have no roles (the default role).
+            description: The ID of your top role. This is the role you possess with the highest position.
           top_role_position:
             type: integer
             format: int32
@@ -1772,6 +2166,26 @@ components:
             type: string
             enum:
             - role_is_managed
+      - type: object
+        description: |-
+          You cannot leave a server or group DM that you are the owner of (you should transfer
+          ownership before leaving).
+        required:
+        - id
+        - message
+        - type
+        properties:
+          id:
+            type: integer
+            format: int64
+            description: The ID of the guild or group DM you are trying to leave.
+          message:
+            type: string
+            description: The error message.
+          type:
+            type: string
+            enum:
+            - cannot_leave_as_owner
       - type: object
         description: Something was already taken, e.g. a username or email.
         required:
