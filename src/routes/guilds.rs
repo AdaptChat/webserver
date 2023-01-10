@@ -1,5 +1,4 @@
 use crate::{
-    amqp,
     extract::{Auth, Json},
     ratelimit::ratelimit,
     routes::{NoContentResult, RouteResult},
@@ -12,7 +11,6 @@ use axum::{
     routing::get,
     Router,
 };
-use essence::ws::OutboundMessage;
 use essence::{
     db::{get_pool, AuthDbExt, GuildDbExt},
     http::guild::{CreateGuildPayload, DeleteGuildPayload, EditGuildPayload, GetGuildQuery},
@@ -80,10 +78,10 @@ pub async fn create_guild(
     transaction.commit().await?;
 
     #[cfg(feature = "ws")]
-    amqp::publish(
-        &amqp::create_channel().await?,
+    crate::amqp::publish(
+        &crate::amqp::create_channel().await?,
         Some(guild_id),
-        OutboundMessage::GuildCreate {
+        essence::ws::OutboundMessage::GuildCreate {
             guild: guild.clone(),
         },
     )
