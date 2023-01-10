@@ -7,10 +7,13 @@
 )]
 #![feature(is_some_and)]
 #![feature(once_cell)]
+#![feature(never_type)]
 
 #[macro_use]
 extern crate dotenv_codegen;
 
+#[cfg(feature = "ws")]
+pub mod amqp;
 pub mod cdn;
 pub mod extract;
 mod openapi;
@@ -36,6 +39,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .await?;
     essence::auth::configure_hasher(include_bytes!("../secret.key")).await;
     cdn::setup()?;
+    #[cfg(feature = "ws")]
+    amqp::connect()?;
 
     // Generate OpenAPI spec
     let mut spec = openapi::ApiSpec::openapi();

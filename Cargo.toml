@@ -16,6 +16,7 @@ axum = { version = "0.6", features = ["headers"] }
 bytes = "1"
 dashmap = "5.4"
 data-url = "0.2"
+deadpool-lapin = { version = "0.10", features = ["serde"], optional = true }
 dotenv = "0.15"
 dotenv_codegen = { git = "https://github.com/FerrisChat/dotenv" }
 essence = { path = "../essence", features = ["auth", "db", "openapi"] }
@@ -30,5 +31,10 @@ tower-http = { version = "0.3", features = ["cors"] }
 utoipa = { git = "https://github.com/juhaku/utoipa", features = ["axum_extras", "chrono", "yaml"] }
 utoipa-swagger-ui = { git = "https://github.com/juhaku/utoipa", features = ["axum"] }
 
+[features]
+default = []
+ws = ["dep:deadpool-lapin"]
+
 [patch."https://github.com/juhaku/utoipa"]
 utoipa-gen = { git = "https://github.com/jay3332/utoipa", branch = "patch-1" }
+
