@@ -1,9 +1,15 @@
-use deadpool_lapin::lapin::options::BasicPublishOptions;
-use deadpool_lapin::lapin::BasicProperties;
-use deadpool_lapin::{lapin::Channel, Object, Pool, Runtime};
+use deadpool_lapin::{
+    lapin::{options::BasicPublishOptions, BasicProperties, Channel},
+    Object, Pool, Runtime,
+};
 use essence::Error;
 use serde::Serialize;
 use std::sync::OnceLock;
+
+pub mod prelude {
+    pub use crate::amqp;
+    pub use essence::ws::OutboundMessage;
+}
 
 /// AMQP connection pool
 pub static POOL: OnceLock<Pool> = OnceLock::new();

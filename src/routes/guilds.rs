@@ -1,3 +1,5 @@
+#[cfg(feature = "ws")]
+use crate::amqp::prelude::*;
 use crate::{
     extract::{Auth, Json},
     ratelimit::ratelimit,
@@ -78,10 +80,10 @@ pub async fn create_guild(
     transaction.commit().await?;
 
     #[cfg(feature = "ws")]
-    crate::amqp::publish(
-        &crate::amqp::create_channel().await?,
+    amqp::publish(
+        &amqp::create_channel().await?,
         Some(guild_id),
-        essence::ws::OutboundMessage::GuildCreate {
+        OutboundMessage::GuildCreate {
             guild: guild.clone(),
         },
     )

@@ -21,25 +21,6 @@ pub mod ratelimit;
 pub mod response;
 pub mod routes;
 
-/// Polyfill for `amqp`
-#[cfg(not(feature = "ws"))]
-pub mod amqp {
-    pub fn connect() -> Result<(), !> {
-        Ok(())
-    }
-    pub async fn get_pool() {}
-    pub async fn create_channel() -> essence::Result<()> {
-        Ok(())
-    }
-    pub async fn publish<C, T>(
-        _channel: C,
-        _guild_id: Option<u64>,
-        _data: &T,
-    ) -> essence::Result<()> {
-        Ok(())
-    }
-}
-
 pub(crate) use ratelimit::ratelimit;
 pub use response::Response;
 

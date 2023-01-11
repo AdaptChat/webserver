@@ -1,3 +1,5 @@
+#[cfg(feature = "ws")]
+use crate::amqp::prelude::*;
 use crate::{
     extract::{Auth, Json},
     ratelimit::ratelimit,
@@ -94,6 +96,17 @@ pub async fn create_guild_channel(
     let channel = db
         .create_guild_channel(guild_id, channel_id, payload)
         .await?;
+
+    #[cfg(feature = "ws")]
+    amqp::publish(
+        &amqp::create_channel().await?,
+        Some(guild_id),
+        OutboundMessage::GuildChannelCreate {
+            channel: channel.clone(),
+        },
+    )
+    .await?;
+
     Ok(Response::created(channel))
 }
 
