@@ -36,7 +36,7 @@ fn validate_channel_name(name: &str) -> essence::Result<()> {
 
 #[inline]
 fn validate_channel_topic(topic: &str) -> essence::Result<()> {
-    if topic.len() < 1024 {
+    if topic.len() > 1024 {
         return Err(Error::InvalidField {
             field: "topic".to_string(),
             message: "Channel topic must be at most 1 KB in size".to_string(),
