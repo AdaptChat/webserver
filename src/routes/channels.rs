@@ -99,9 +99,9 @@ pub async fn create_guild_channel(
         .await?;
 
     #[cfg(feature = "ws")]
-    amqp::publish(
+    amqp::publish_guild_event(
         &amqp::create_channel().await?,
-        Some(guild_id),
+        guild_id,
         OutboundMessage::GuildChannelCreate {
             channel: channel.clone(),
         },

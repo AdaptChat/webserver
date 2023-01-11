@@ -51,7 +51,8 @@ pub async fn create_channel() -> essence::Result<Channel> {
 /// Sends a message to the amqp server.
 pub async fn publish<T: Serialize + Send>(
     channel: &Channel,
-    guild_id: Option<u64>,
+    exchange: &str,
+    routing_key: &str,
     data: T,
 ) -> essence::Result<()> {
     let bytes = bincode::serialize(&data).map_err(|err| Error::InternalError {
@@ -62,11 +63,8 @@ pub async fn publish<T: Serialize + Send>(
 
     channel
         .basic_publish(
-            &guild_id
-                .as_ref()
-                .map(ToString::to_string)
-                .unwrap_or_default(),
-            "*",
+            exchange,
+            routing_key,
             BasicPublishOptions::default(),
             &bytes,
             BasicProperties::default(),
@@ -79,4 +77,22 @@ pub async fn publish<T: Serialize + Send>(
         })?;
 
     Ok(())
+}
+
+/// Sends a guild-related event to the amqp server.
+pub async fn publish_guild_event<T: Serialize + Send>(
+    channel: &Channel,
+    guild_id: u64,
+    event: T,
+) -> essence::Result<()> {
+    publish(channel, &guild_id.to_string(), "*", event).await
+}
+
+/// Sends a user-related event to the amqp server.
+pub async fn publish_user_event<T: Serialize + Send>(
+    channel: &Channel,
+    user_id: u64,
+    event: T,
+) -> essence::Result<()> {
+    publish(channel, "events", &user_id.to_string(), event).await
 }

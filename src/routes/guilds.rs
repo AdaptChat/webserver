@@ -80,9 +80,9 @@ pub async fn create_guild(
     transaction.commit().await?;
 
     #[cfg(feature = "ws")]
-    amqp::publish(
+    amqp::publish_user_event(
         &amqp::create_channel().await?,
-        Some(guild_id),
+        owner_id,
         OutboundMessage::GuildCreate {
             guild: guild.clone(),
         },
