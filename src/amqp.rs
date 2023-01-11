@@ -54,7 +54,7 @@ pub async fn publish<T: Serialize + Send>(
     guild_id: Option<u64>,
     data: T,
 ) -> essence::Result<()> {
-    let bytes = rmp_serde::to_vec(&data).map_err(|err| Error::InternalError {
+    let bytes = bincode::serialize(&data).map_err(|err| Error::InternalError {
         what: Some("amqp (serialization)".to_string()),
         message: err.to_string(),
         debug: Some(format!("{err:?}")),
