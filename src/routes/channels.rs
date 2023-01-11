@@ -61,6 +61,7 @@ fn validate_channel_topic(topic: &str) -> essence::Result<()> {
         (status = FORBIDDEN, description = "Missing permissions", body = Error),
         (status = NOT_FOUND, description = "Guild not found", body = Error),
     ),
+    security(("token" = [])),
 )]
 pub async fn create_guild_channel(
     Auth(user_id, _): Auth,
@@ -121,6 +122,7 @@ pub async fn create_guild_channel(
         (status = UNAUTHORIZED, description = "Invalid token", body = Error),
         (status = NOT_FOUND, description = "Guild not found", body = Error),
     ),
+    security(("token" = [])),
 )]
 pub async fn get_guild_channels(
     Auth(user_id, _): Auth,
@@ -145,6 +147,7 @@ pub async fn get_guild_channels(
         (status = UNAUTHORIZED, description = "Invalid token", body = Error),
         (status = NOT_FOUND, description = "Channel not found", body = Error),
     ),
+    security(("token" = [])),
 )]
 pub async fn get_channel(
     Auth(user_id, _): Auth,
@@ -179,6 +182,7 @@ pub async fn get_channel(
         (status = FORBIDDEN, description = "Missing permissions", body = Error),
         (status = NOT_FOUND, description = "Channel not found", body = Error),
     ),
+    security(("token" = [])),
 )]
 pub async fn edit_channel(
     Auth(user_id, _): Auth,
@@ -228,6 +232,7 @@ pub async fn edit_channel(
         (status = FORBIDDEN, description = "Missing permissions", body = Error),
         (status = NOT_FOUND, description = "Channel not found", body = Error),
     ),
+    security(("token" = [])),
 )]
 pub async fn delete_channel(
     Auth(user_id, _): Auth,

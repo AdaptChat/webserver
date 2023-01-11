@@ -53,6 +53,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       deprecated: false
+      security:
+      - token: []
     delete:
       tags:
       - channels
@@ -94,6 +96,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       deprecated: false
+      security:
+      - token: []
     patch:
       tags:
       - channels
@@ -150,6 +154,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       deprecated: false
+      security:
+      - token: []
   /guilds:
     get:
       tags:
@@ -420,6 +426,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       deprecated: false
+      security:
+      - token: []
     post:
       tags:
       - channels
@@ -476,6 +484,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       deprecated: false
+      security:
+      - token: []
   /guilds/{guild_id}/members:
     get:
       tags:
