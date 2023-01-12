@@ -1,9 +1,9 @@
+use bincode::Encode;
 use deadpool_lapin::{
     lapin::{options::BasicPublishOptions, BasicProperties, Channel},
     Object, Pool, Runtime,
 };
 use essence::Error;
-use serde::Serialize;
 use std::sync::OnceLock;
 
 pub mod prelude {
@@ -49,16 +49,18 @@ pub async fn create_channel() -> essence::Result<Channel> {
 }
 
 /// Sends a message to the amqp server.
-pub async fn publish<T: Serialize + Send>(
+pub async fn publish<T: Encode + Send>(
     channel: &Channel,
     exchange: &str,
     routing_key: &str,
     data: T,
 ) -> essence::Result<()> {
-    let bytes = bincode::serialize(&data).map_err(|err| Error::InternalError {
-        what: Some("amqp (serialization)".to_string()),
-        message: err.to_string(),
-        debug: Some(format!("{err:?}")),
+    let bytes = bincode::encode_to_vec(&data, bincode::config::legacy()).map_err(|err| {
+        Error::InternalError {
+            what: Some("amqp (serialization)".to_string()),
+            message: err.to_string(),
+            debug: Some(format!("{err:?}")),
+        }
     })?;
 
     channel
@@ -80,7 +82,7 @@ pub async fn publish<T: Serialize + Send>(
 }
 
 /// Sends a guild-related event to the amqp server.
-pub async fn publish_guild_event<T: Serialize + Send>(
+pub async fn publish_guild_event<T: Encode + Send>(
     channel: &Channel,
     guild_id: u64,
     event: T,
@@ -89,7 +91,7 @@ pub async fn publish_guild_event<T: Serialize + Send>(
 }
 
 /// Sends a user-related event to the amqp server.
-pub async fn publish_user_event<T: Serialize + Send>(
+pub async fn publish_user_event<T: Encode + Send>(
     channel: &Channel,
     user_id: u64,
     event: T,
