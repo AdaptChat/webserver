@@ -1439,7 +1439,7 @@ components:
           type:
             type: string
             enum:
-            - Text
+            - text
       - type: object
         description: An announcement channel.
         required:
@@ -1456,7 +1456,7 @@ components:
           type:
             type: string
             enum:
-            - Announcement
+            - announcement
       - type: object
         description: A voice channel.
         required:
@@ -1464,11 +1464,13 @@ components:
         properties:
           icon:
             type: string
-            description: The URL of the icon of the channel, if any.
+            description: |-
+              The icon of the channel represented as a
+              [Data URI scheme](https://en.wikipedia.org/wiki/Data_URI_scheme), if any.
           type:
             type: string
             enum:
-            - Voice
+            - voice
           user_limit:
             type: integer
             format: int32
@@ -1482,7 +1484,7 @@ components:
           type:
             type: string
             enum:
-            - Category
+            - category
       description: The type and other information sent to create a new guild channel.
       discriminator:
         propertyName: type

@@ -55,7 +55,7 @@ pub async fn publish<T: Encode + Send>(
     routing_key: &str,
     data: T,
 ) -> essence::Result<()> {
-    let bytes = bincode::encode_to_vec(&data, bincode::config::legacy()).map_err(|err| {
+    let bytes = bincode::encode_to_vec(&data, bincode::config::standard()).map_err(|err| {
         Error::InternalError {
             what: Some("amqp (serialization)".to_string()),
             message: err.to_string(),
