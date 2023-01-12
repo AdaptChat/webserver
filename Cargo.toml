@@ -20,7 +20,7 @@ data-url = "0.2"
 deadpool-lapin = { version = "0.10", features = ["serde"], optional = true }
 dotenv = "0.15"
 dotenv_codegen = { git = "https://github.com/FerrisChat/dotenv" }
-essence = { path = "../essence", features = ["auth", "db", "openapi"] }
+essence = { path = "../essence", features = ["auth", "bincode", "db", "openapi"] }
 forwarded-header-value = "0.1"
 reqwest = { version = "0.11", default-features = false, features = ["gzip", "json", "multipart", "rustls-tls"] }
 rmp-serde = "1"
