@@ -98,3 +98,18 @@ pub async fn publish_user_event<T: Encode + Send>(
 ) -> essence::Result<()> {
     publish(channel, "events", &user_id.to_string(), event).await
 }
+
+/// Sends a guild-related event if `guild_id` is `Some`, otherwise fallsback to a user-related
+/// event.
+pub async fn publish_event<T: Encode + Send>(
+    channel: &Channel,
+    guild_id: Option<u64>,
+    user_id: u64,
+    event: T,
+) -> essence::Result<()> {
+    if let Some(guild_id) = guild_id {
+        publish_guild_event(channel, guild_id, event).await
+    } else {
+        publish_user_event(channel, user_id, event).await
+    }
+}

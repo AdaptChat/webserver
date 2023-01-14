@@ -214,7 +214,20 @@ pub async fn edit_channel(
         db.assert_user_is_recipient(channel_id, user_id).await?;
     }
 
-    let channel = db.edit_channel(channel_id, payload).await?;
+    let (before, channel) = db.edit_channel(channel_id, payload).await?;
+
+    #[cfg(feature = "ws")]
+    amqp::publish_event(
+        &amqp::create_channel().await?,
+        guild_id,
+        user_id,
+        OutboundMessage::ChannelUpdate {
+            before,
+            after: channel.clone(),
+        },
+    )
+    .await?;
+
     Ok(Response::ok(channel))
 }
 
@@ -260,6 +273,16 @@ pub async fn delete_channel(
     }
 
     db.delete_channel(channel_id).await?;
+
+    #[cfg(feature = "ws")]
+    amqp::publish_event(
+        &amqp::create_channel().await?,
+        guild_id,
+        user_id,
+        OutboundMessage::ChannelDelete { channel_id },
+    )
+    .await?;
+
     Ok(StatusCode::NO_CONTENT)
 }
 
