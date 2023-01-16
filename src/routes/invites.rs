@@ -1,18 +1,17 @@
-use crate::ratelimit::ratelimit;
-use crate::routes::NoContentResult;
+#[cfg(feature = "ws")]
+use crate::amqp::prelude::*;
 use crate::{
     extract::{Auth, Json},
-    routes::RouteResult,
+    ratelimit::ratelimit,
+    routes::{NoContentResult, RouteResult},
     Response,
 };
-use axum::handler::Handler;
-use axum::http::StatusCode;
-use axum::{extract::Path, routing::get, Router};
-use essence::models::Member;
+use axum::{extract::Path, handler::Handler, http::StatusCode, routing::get, Router};
 use essence::{
     db::{get_pool, GuildDbExt, InviteDbExt},
     http::invite::CreateInvitePayload,
-    models::{invite::Invite, Permissions, UserFlags},
+    models::Member,
+    models::{Invite, Permissions, UserFlags},
     Error, NotFoundExt,
 };
 use rand::distributions::{Alphanumeric, DistString};
@@ -157,7 +156,19 @@ pub async fn use_invite(
         }));
     }
 
-    let member = get_pool().use_invite(user_id, code).await?;
+    let (invite, member) = get_pool().use_invite(user_id, code).await?;
+
+    #[cfg(feature = "ws")]
+    amqp::publish_guild_event(
+        &amqp::create_channel().await?,
+        member.guild_id,
+        OutboundMessage::MemberJoin {
+            member: member.clone(),
+            invite: Some(invite),
+        },
+    )
+    .await?;
+
     Ok(Response::ok(member))
 }
 
