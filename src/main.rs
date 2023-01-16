@@ -5,6 +5,7 @@
     clippy::doc_markdown,
     clippy::similar_names
 )]
+#![cfg_attr(all(feature = "ws", target_os = "linux"), allow(unused_variables))]
 #![feature(is_some_and)]
 #![feature(once_cell)]
 #![feature(never_type)]
@@ -62,6 +63,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .merge(routes::auth::router())
         .merge(routes::channels::router())
         .merge(routes::guilds::router())
+        .merge(routes::invites::router())
         .merge(routes::members::router())
         .merge(routes::roles::router())
         .merge(routes::users::router())

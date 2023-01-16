@@ -1,4 +1,4 @@
-use crate::routes::{auth, channels, guilds, members, roles, users};
+use crate::routes::{auth, channels, guilds, invites, members, roles, users};
 use essence::{http, models};
 use utoipa::{
     openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
@@ -36,6 +36,11 @@ use utoipa::{
         members::edit_member,
         members::kick_member,
         members::leave_guild,
+        invites::get_guild_invites,
+        invites::create_guild_invite,
+        invites::delete_guild_invite,
+        invites::get_invite,
+        invites::use_invite,
     ),
     components(schemas(
         http::auth::LoginRequest,
@@ -47,6 +52,7 @@ use utoipa::{
         http::guild::CreateGuildPayload,
         http::guild::EditGuildPayload,
         http::guild::DeleteGuildPayload,
+        http::invite::CreateInvitePayload,
         http::member::EditClientMemberPayload,
         http::member::EditMemberPayload,
         http::role::CreateRolePayload,
@@ -93,6 +99,7 @@ use utoipa::{
         models::ClientUser,
         models::RelationshipType,
         models::Relationship,
+        models::Invite,
         essence::Error,
         essence::error::MalformedBodyErrorType,
     )),

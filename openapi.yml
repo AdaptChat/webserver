@@ -486,6 +486,162 @@ paths:
       deprecated: false
       security:
       - token: []
+  /guilds/{guild_id}/invites:
+    get:
+      tags:
+      - invites
+      summary: Get Guild Invites
+      description: |-
+        Get Guild Invites
+
+        Gets a list of invites for the given guild. You must have the `MANAGE_INVITES` permission for
+        the guild to use this endpoint.
+      operationId: get_guild_invites
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: List of invites
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invite'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+    post:
+      tags:
+      - invites
+      summary: Create Invite to Guild
+      description: |-
+        Create Invite to Guild
+
+        Creates an invite that leads to the homepage of the given guild.
+        You must have the `CREATE_INVITES` permission for the guild to use this endpoint.
+      operationId: create_guild_invite
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInvitePayload'
+        required: true
+      responses:
+        '201':
+          description: Invite was successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invite'
+        '400':
+          description: Bot account or invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+  /guilds/{guild_id}/invites/{code}:
+    delete:
+      tags:
+      - invites
+      summary: Delete Invite
+      description: |-
+        Delete Invite
+
+        Deletes (revokes) an invite given its guild ID and code.
+        You must have the `MANAGE_INVITES` permission for the guild to use this endpoint.
+      operationId: delete_guild_invite
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      - name: code
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Invite was successfully deleted
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild or invite not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
   /guilds/{guild_id}/members:
     get:
       tags:
@@ -1117,6 +1273,82 @@ paths:
       deprecated: false
       security:
       - token: []
+  /invites/{code}:
+    get:
+      tags:
+      - invites
+      summary: Get Invite
+      description: |-
+        Get Invite
+
+        Gets an invite by its code. This endpoint does not require authentication, but is rate limited
+        by IP.
+      operationId: get_invite
+      parameters:
+      - name: code
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Invite
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invite'
+        '404':
+          description: Invite not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+    post:
+      tags:
+      - invites
+      summary: Use Invite
+      description: |-
+        Use Invite
+
+        Joins a guild using an invite.
+      operationId: use_invite
+      parameters:
+      - name: code
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Member object for the joined guild
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+        '400':
+          description: Bot account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Invite not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
   /login:
     post:
       tags:
@@ -1535,6 +1767,24 @@ components:
         public:
           type: boolean
           description: Whether the guild should be public or not. Defaults to `false`.
+    CreateInvitePayload:
+      type: object
+      description: |-
+        The payload sent to create a new invite in a guild. Note that invites are immutable, so after
+        creation, they cannot be modified.
+      properties:
+        max_age:
+          type: integer
+          format: int32
+          description: |-
+            The duration of the invite, in seconds. Must be between 0 and 604_800 (7 days), or leave
+            empty for an invite that never expires.
+        max_uses:
+          type: integer
+          format: int32
+          description: |-
+            The maximum number of uses for the invite. Must be at least 1, or leave empty for unlimited
+            uses.
     CreateRolePayload:
       type: object
       description: Payload sent to create a new role in a guild.
@@ -2439,6 +2689,51 @@ components:
           type: integer
           format: int32
           description: The total number of members in the guild.
+    Invite:
+      type: object
+      description: |-
+        A model representing an invite to a guild. All invites are **immutable**; they cannot be
+        modified once changed.
+      required:
+      - code
+      - inviter_id
+      - guild_id
+      - created_at
+      - uses
+      - max_uses
+      - max_age
+      properties:
+        code:
+          type: string
+          description: The code of the invite.
+        created_at:
+          type: string
+          format: date-time
+          description: A timestamp representing when this invite was created.
+        guild:
+          $ref: '#/components/schemas/PartialGuild'
+        guild_id:
+          type: integer
+          format: int64
+          description: The ID of the guild this invite leads to.
+        inviter_id:
+          type: integer
+          format: int64
+          description: The ID of the user that created this invite.
+        max_age:
+          type: integer
+          format: int32
+          description: |-
+            How long this invite is valid for, in seconds. ``0`` if this invite never expires. This
+            counts from the time the invite was created (see `created_at`).
+        max_uses:
+          type: integer
+          format: int32
+          description: How many times this invite can be used. ``0`` if unlimited.
+        uses:
+          type: integer
+          format: int32
+          description: How many times this invite has been used.
     LoginRequest:
       type: object
       description: The request body for POST /login
