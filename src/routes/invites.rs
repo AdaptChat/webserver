@@ -8,6 +8,7 @@ use crate::{
 };
 use axum::{extract::Path, handler::Handler, http::StatusCode, routing::get, Router};
 use essence::db::MemberDbExt;
+use essence::http::guild::GetGuildQuery;
 use essence::{
     db::{get_pool, GuildDbExt, InviteDbExt},
     http::invite::CreateInvitePayload,
@@ -162,15 +163,45 @@ pub async fn use_invite(
     let (invite, member) = db.use_invite(user_id, code).await?;
     let member = if let Some(member) = member {
         #[cfg(feature = "ws")]
-        amqp::publish_guild_event(
-            &amqp::create_channel().await?,
-            member.guild_id,
-            OutboundMessage::MemberJoin {
-                member: member.clone(),
-                invite: Some(invite),
-            },
-        )
-        .await?;
+        let member_clone = member.clone();
+
+        #[cfg(feature = "ws")]
+        tokio::spawn(async move {
+            let channel = amqp::create_channel().await?;
+            let member = member_clone;
+            let user_id = member.user_id();
+            let guild_id = member.guild_id;
+
+            amqp::publish_guild_event(
+                &channel,
+                guild_id,
+                OutboundMessage::MemberJoin {
+                    member,
+                    invite: Some(invite),
+                },
+            )
+            .await?;
+
+            amqp::publish_user_event(
+                &channel,
+                user_id,
+                OutboundMessage::GuildCreate {
+                    guild: db
+                        .fetch_guild(guild_id, GetGuildQuery::all())
+                        .await?
+                        .ok_or_else(|| Error::InternalError {
+                            what: None,
+                            message: String::from(
+                                "Guild registered for invite but could not be fetched",
+                            ),
+                            debug: None,
+                        })?,
+                },
+            )
+            .await?;
+
+            Ok::<_, Error>(())
+        });
 
         member
     } else {
