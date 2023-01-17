@@ -7,6 +7,7 @@ use crate::{
     Response,
 };
 use axum::{extract::Path, handler::Handler, http::StatusCode, routing::get, Router};
+use essence::db::MemberDbExt;
 use essence::{
     db::{get_pool, GuildDbExt, InviteDbExt},
     http::invite::CreateInvitePayload,
@@ -134,7 +135,8 @@ pub async fn delete_guild_invite(
 
 /// Use Invite
 ///
-/// Joins a guild using an invite.
+/// Joins a guild using an invite. If the guild was successfully joined, the created member object
+/// is returned. If the user is already in the guild, the existing member object is returned.
 #[utoipa::path(
     post,
     path = "/invites/{code}",
@@ -156,18 +158,32 @@ pub async fn use_invite(
         }));
     }
 
-    let (invite, member) = get_pool().use_invite(user_id, code).await?;
+    let mut db = get_pool();
+    let (invite, member) = db.use_invite(user_id, code).await?;
+    let member = if let Some(member) = member {
+        #[cfg(feature = "ws")]
+        amqp::publish_guild_event(
+            &amqp::create_channel().await?,
+            member.guild_id,
+            OutboundMessage::MemberJoin {
+                member: member.clone(),
+                invite: Some(invite),
+            },
+        )
+        .await?;
 
-    #[cfg(feature = "ws")]
-    amqp::publish_guild_event(
-        &amqp::create_channel().await?,
-        member.guild_id,
-        OutboundMessage::MemberJoin {
-            member: member.clone(),
-            invite: Some(invite),
-        },
-    )
-    .await?;
+        member
+    } else {
+        db.fetch_member_by_id(invite.guild_id, user_id)
+            .await?
+            .ok_or_else(|| Error::InternalError {
+                what: None,
+                message: String::from(
+                    "Member is already in guild, but no member could be fetched from guild",
+                ),
+                debug: None,
+            })?
+    };
 
     Ok(Response::ok(member))
 }
