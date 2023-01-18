@@ -156,6 +156,323 @@ paths:
       deprecated: false
       security:
       - token: []
+  /channels/{channel_id}/messages:
+    get:
+      tags:
+      - messages
+      summary: Get Message History
+      description: |-
+        Get Message History
+
+        Fetches multiple messages from the channel's message history in bulk.
+        If in a guild, you must have the `VIEW_MESSAGE_HISTORY` permission to use this endpoint.
+      operationId: get_message_history
+      parameters:
+      - name: before
+        in: query
+        description: |-
+          If specified, only messages before this message will be returned. If any messages exactly
+          match this ID, they will **not** be returned.
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: after
+        in: query
+        description: |-
+          If specified, only messages after this message will be returned. If any messages exactly
+          match this ID, they will **not** be returned.
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: limit
+        in: query
+        description: |-
+          The limit of messages to return. If unspecified, this defaults to ``100``. Must be between
+          ``0`` and ``200``.
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: user_id
+        in: query
+        description: If specified, only messages sent by the given user will be returned.
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: oldest_first
+        in: query
+        description: |-
+          Whether or not to query messages starting from the oldest message first. Defaults to
+          ``false``.
+
+          If ``true``, messages will be sorted from oldest to newest. If ``false``, messages will be
+          sorted from newest to oldest.
+        required: true
+        schema:
+          type: boolean
+      - name: channel_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: Array of message objects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Message'
+        '400':
+          description: Invalid query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+    post:
+      tags:
+      - messages
+      summary: Create Message
+      description: |-
+        Create Message
+
+        Sends a message in the given channel. You must have both the `VIEW_CHANNEL` and `SEND_MESSAGES`
+        permissions in that channel if this message is being sent in a guild.
+      operationId: create_message
+      parameters:
+      - name: channel_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMessagePayload'
+        required: true
+      responses:
+        '201':
+          description: Message object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+  /channels/{channel_id}/messages/{message_id}:
+    get:
+      tags:
+      - messages
+      summary: Get Message
+      description: |-
+        Get Message
+
+        Gets a message in the given channel with the given ID.
+        If in a guild, you must have the `VIEW_MESSAGE_HISTORY` permission to use this endpoint.
+      operationId: get_message
+      parameters:
+      - name: channel_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      - name: message_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: Message object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel or message not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+    delete:
+      tags:
+      - messages
+      summary: Delete Message
+      description: |-
+        Delete Message
+
+        Deletes a message in the given channel. In a guild, you must have the `VIEW_CHANNEL` permission
+        to delete your own messages, with addition to the `MANAGE_MESSAGES` permission if you want to
+        delete messages sent by other members. If you have this permission, you are only able to delete
+        any messages sent by members who have either left the guild or are ranked lower than you in the
+        role hierarchy.
+      operationId: delete_message
+      parameters:
+      - name: channel_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      - name: message_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '204':
+          description: Message deleted
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel or message not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+    patch:
+      tags:
+      - messages
+      summary: Edit Message
+      description: |-
+        Edit Message
+
+        Edits a message in the given channel. You must have the `VIEW_CHANNEL` and `SEND_MESSAGES`
+        permissions in that channel if the target message is in a guild.
+      operationId: edit_message
+      parameters:
+      - name: channel_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      - name: message_id
+        in: path
+        required: true
+        deprecated: false
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditMessagePayload'
+        required: true
+      responses:
+        '200':
+          description: Message object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel or message not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
   /guilds:
     get:
       tags:
@@ -1312,7 +1629,8 @@ paths:
       description: |-
         Use Invite
 
-        Joins a guild using an invite.
+        Joins a guild using an invite. If the guild was successfully joined, the created member object
+        is returned. If the user is already in the guild, the existing member object is returned.
       operationId: use_invite
       parameters:
       - name: code
@@ -1785,6 +2103,24 @@ components:
           description: |-
             The maximum number of uses for the invite. Must be at least 1, or leave empty for unlimited
             uses.
+    CreateMessagePayload:
+      type: object
+      description: Payload sent to send a message.
+      properties:
+        content:
+          type: string
+          description: |-
+            The content of the message, if any. If specified, this should be a string with a size of at
+            most 4 KB.
+        embeds:
+          type: array
+          items:
+            $ref: '#/components/schemas/Embed'
+        nonce:
+          type: string
+          description: |-
+            A nonce to include with the message. This is not stored and can be used to identify the
+            message later on (it is relayed through the websocket).
     CreateRolePayload:
       type: object
       description: Payload sent to create a new role in a guild.
@@ -2019,6 +2355,18 @@ components:
 
               The default role will always be added to the member, regardless of whether it is in this
               list.
+    EditMessagePayload:
+      type: object
+      description: Payload sent to edit a message.
+      properties:
+        content:
+          type: string
+          description: The new content of the message, if any. Explicitly specify `null` to remove the content.
+          nullable: true
+        embeds:
+          type: array
+          items:
+            $ref: '#/components/schemas/Embed'
     EditRolePayload:
       type: object
       description: Payload sent to edit a role.
@@ -2854,7 +3202,9 @@ components:
           author_id:
             type: integer
             format: int64
-            description: The snowflake ID of the author of this message, or `None` if this is a system message.
+            description: |-
+              The snowflake ID of the author of this message, or `None` if this is a system message, or if
+              the user has been deleted.
           channel_id:
             type: integer
             format: int64
@@ -2868,10 +3218,6 @@ components:
               $ref: '#/components/schemas/Embed'
           flags:
             $ref: '#/components/schemas/MessageFlags'
-          guild_id:
-            type: integer
-            format: int64
-            description: The snowflake ID of the guild this message was sent in, if any.
           id:
             type: integer
             format: int64

@@ -769,6 +769,7 @@ dependencies = [
  "itertools",
  "ring",
  "serde",
+ "serde_json",
  "sqlx",
  "utoipa",
 ]

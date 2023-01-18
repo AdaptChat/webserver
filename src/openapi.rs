@@ -1,4 +1,4 @@
-use crate::routes::{auth, channels, guilds, invites, members, roles, users};
+use crate::routes::{auth, channels, guilds, invites, members, messages, roles, users};
 use essence::{http, models};
 use utoipa::{
     openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
@@ -41,6 +41,11 @@ use utoipa::{
         invites::delete_guild_invite,
         invites::get_invite,
         invites::use_invite,
+        messages::get_message_history,
+        messages::get_message,
+        messages::create_message,
+        messages::edit_message,
+        messages::delete_message,
     ),
     components(schemas(
         http::auth::LoginRequest,
@@ -55,6 +60,8 @@ use utoipa::{
         http::invite::CreateInvitePayload,
         http::member::EditClientMemberPayload,
         http::member::EditMemberPayload,
+        http::message::CreateMessagePayload,
+        http::message::EditMessagePayload,
         http::role::CreateRolePayload,
         http::role::EditRolePayload,
         http::user::CreateUserPayload,

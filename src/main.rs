@@ -65,6 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .merge(routes::guilds::router())
         .merge(routes::invites::router())
         .merge(routes::members::router())
+        .merge(routes::messages::router())
         .merge(routes::roles::router())
         .merge(routes::users::router())
         .merge(SwaggerUi::new("/docs").url("/openapi.json", spec))
