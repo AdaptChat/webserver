@@ -13,6 +13,8 @@ use axum::{
     routing::get,
     Router,
 };
+use essence::db::{MemberDbExt, UserDbExt};
+use essence::models::MemberOrUser;
 use essence::{
     db::{get_pool, ChannelDbExt, GuildDbExt, MessageDbExt, RoleDbExt},
     http::message::{CreateMessagePayload, EditMessagePayload, MessageHistoryQuery},
@@ -189,21 +191,40 @@ pub async fn create_message(
     )
     .await?;
 
+    let mut db = get_pool();
     let message_id = generate_snowflake(ModelType::Message, 0); // TODO: node id
-    let message = get_pool()
+    let message = db
         .create_message(channel_id, message_id, user_id, payload)
         .await?;
 
     #[cfg(feature = "ws")]
-    amqp::publish_event(
-        &amqp::create_channel().await?,
-        guild_id,
-        user_id,
-        OutboundMessage::MessageCreate {
-            message: message.clone(),
-        },
-    )
-    .await?;
+    let message_clone = message.clone();
+
+    #[cfg(feature = "ws")]
+    tokio::spawn(async move {
+        let mut message = message_clone;
+
+        // TODO: this should be cached
+        message.author = if let Some(guild_id) = guild_id {
+            db.fetch_member_by_id(guild_id, user_id)
+                .await?
+                .map(MemberOrUser::Member)
+        } else {
+            db.fetch_user_by_id(user_id).await?.map(MemberOrUser::User)
+        };
+
+        amqp::publish_event(
+            &amqp::create_channel().await?,
+            guild_id,
+            user_id,
+            OutboundMessage::MessageCreate {
+                message: message.clone(),
+            },
+        )
+        .await?;
+
+        Ok::<_, Error>(())
+    });
 
     Ok(Response::created(message))
 }
