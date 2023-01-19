@@ -191,7 +191,7 @@ pub async fn create_message(
 
     let message_id = generate_snowflake(ModelType::Message, 0); // TODO: node id
     let message = get_pool()
-        .create_message(channel_id, user_id, message_id, payload)
+        .create_message(channel_id, message_id, user_id, payload)
         .await?;
 
     #[cfg(feature = "ws")]
