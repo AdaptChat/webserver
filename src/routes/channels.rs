@@ -100,7 +100,6 @@ pub async fn create_guild_channel(
 
     #[cfg(feature = "ws")]
     amqp::publish_guild_event(
-        &amqp::create_channel().await?,
         guild_id,
         OutboundMessage::GuildChannelCreate {
             channel: channel.clone(),
@@ -218,7 +217,6 @@ pub async fn edit_channel(
 
     #[cfg(feature = "ws")]
     amqp::publish_event(
-        &amqp::create_channel().await?,
         guild_id,
         user_id,
         OutboundMessage::ChannelUpdate {
@@ -276,7 +274,6 @@ pub async fn delete_channel(
 
     #[cfg(feature = "ws")]
     amqp::publish_event(
-        &amqp::create_channel().await?,
         guild_id,
         user_id,
         OutboundMessage::ChannelDelete { channel_id },

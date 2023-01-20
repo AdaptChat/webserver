@@ -164,13 +164,11 @@ pub async fn use_invite(
 
         #[cfg(feature = "ws")]
         tokio::spawn(async move {
-            let channel = amqp::create_channel().await?;
             let member = member_clone;
             let user_id = member.user_id();
             let guild_id = member.guild_id;
 
             amqp::publish_guild_event(
-                &channel,
                 guild_id,
                 OutboundMessage::MemberJoin {
                     member,
@@ -180,7 +178,6 @@ pub async fn use_invite(
             .await?;
 
             amqp::publish_user_event(
-                &channel,
                 user_id,
                 OutboundMessage::GuildCreate {
                     guild: db

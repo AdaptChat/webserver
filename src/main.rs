@@ -41,7 +41,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     essence::auth::configure_hasher(include_bytes!("../secret.key")).await;
     cdn::setup()?;
     #[cfg(feature = "ws")]
-    amqp::connect()?;
+    amqp::connect().await?;
 
     // Generate OpenAPI spec
     let mut spec = openapi::ApiSpec::openapi();

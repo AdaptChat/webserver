@@ -214,7 +214,6 @@ pub async fn create_message(
         };
 
         amqp::publish_event(
-            &amqp::create_channel().await?,
             guild_id,
             user_id,
             OutboundMessage::MessageCreate {
@@ -269,7 +268,6 @@ pub async fn edit_message(
 
     #[cfg(feature = "ws")]
     amqp::publish_event(
-        &amqp::create_channel().await?,
         guild_id,
         user_id,
         OutboundMessage::MessageUpdate {
@@ -341,7 +339,6 @@ pub async fn delete_message(
 
     #[cfg(feature = "ws")]
     amqp::publish_event(
-        &amqp::create_channel().await?,
         guild_id,
         user_id,
         OutboundMessage::MessageDelete { message_id },

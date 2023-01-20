@@ -81,7 +81,6 @@ pub async fn create_guild(
 
     #[cfg(feature = "ws")]
     amqp::publish_user_event(
-        &amqp::create_channel().await?,
         owner_id,
         OutboundMessage::GuildCreate {
             guild: guild.clone(),
