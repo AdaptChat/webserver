@@ -112,8 +112,7 @@ use utoipa::{
     )),
     modifiers(&Security),
     servers(
-        (description = "Production", url = "https://adapt.lambdabot.cf"),
-        (description = "Local", url = "http://127.0.0.1:8077"),
+        (description = "Production", url = "https://api.adapt.chat"),
     )
 )]
 pub struct ApiSpec;
