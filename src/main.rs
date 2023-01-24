@@ -39,6 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ))
     .await?;
     essence::auth::configure_hasher(include_bytes!("../secret.key")).await;
+    essence::cache::setup();
     cdn::setup()?;
     #[cfg(feature = "ws")]
     amqp::connect().await?;
