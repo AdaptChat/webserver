@@ -12,7 +12,7 @@ use essence::{
     http::channel::{CreateGuildChannelInfo, CreateGuildChannelPayload, EditChannelPayload},
     models::{Channel, ChannelType, GuildChannel, ModelType, Permissions},
     snowflake::generate_snowflake,
-    Error, Maybe, NotFoundExt,
+    utoipa, Error, Maybe, NotFoundExt,
 };
 
 #[inline]

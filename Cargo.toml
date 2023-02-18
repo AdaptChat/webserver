@@ -20,7 +20,7 @@ data-url = "0.2"
 deadpool-lapin = { version = "0.10", features = ["serde"], optional = true }
 dotenv = "0.15"
 dotenv_codegen = { git = "https://github.com/FerrisChat/dotenv" }
-essence = { path = "../essence", features = ["auth", "bincode", "db", "openapi"] }
+essence = { path = "../essence", features = ["webserver"] }
 forwarded-header-value = "0.1"
 rand = "0.8"
 reqwest = { version = "0.11", default-features = false, features = ["gzip", "json", "multipart", "rustls-tls"] }
@@ -30,8 +30,7 @@ simd-json = "0.7"
 tokio = { version = "1", features = ["rt-multi-thread", "net", "time", "macros", "sync", "signal", "parking_lot"] }
 tower = { version = "0.4", features = ["buffer"] }
 tower-http = { version = "0.3", features = ["cors"] }
-utoipa = { git = "https://github.com/juhaku/utoipa", features = ["axum_extras", "chrono", "yaml"] }
-utoipa-swagger-ui = { git = "https://github.com/juhaku/utoipa", features = ["axum"] }
+utoipa-swagger-ui = { version = "3.0.2", features = ["axum"] }
 
 [features]
 default = []

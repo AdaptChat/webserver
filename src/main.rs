@@ -26,9 +26,9 @@ pub(crate) use ratelimit::ratelimit;
 pub use response::Response;
 
 use axum::{http::StatusCode, routing::get, Router, Server};
+use essence::utoipa::OpenApi;
 use std::net::SocketAddr;
 use tower_http::cors::CorsLayer;
-use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 #[tokio::main]

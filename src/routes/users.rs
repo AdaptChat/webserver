@@ -18,7 +18,7 @@ use essence::{
     http::user::{CreateUserPayload, CreateUserResponse, DeleteUserPayload, EditUserPayload},
     models::{ClientUser, ModelType, User, UserFlags},
     snowflake::generate_snowflake,
-    Error, Maybe, NotFoundExt,
+    utoipa, Error, Maybe, NotFoundExt,
 };
 
 fn validate_username(username: impl AsRef<str>) -> Result<(), Error> {

@@ -18,7 +18,7 @@ use essence::{
     http::guild::{CreateGuildPayload, DeleteGuildPayload, EditGuildPayload, GetGuildQuery},
     models::{Guild, ModelType, PartialGuild, Permissions, UserFlags},
     snowflake::{generate_snowflake, with_model_type},
-    Error, Maybe, NotFoundExt,
+    utoipa, Error, Maybe, NotFoundExt,
 };
 
 #[inline]

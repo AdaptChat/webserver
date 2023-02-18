@@ -9,7 +9,7 @@ use essence::{
     db::{get_pool, GuildDbExt, MemberDbExt, RoleDbExt},
     http::member::{EditClientMemberPayload, EditMemberPayload},
     models::{Member, Permissions},
-    Error, Maybe, NotFoundExt,
+    utoipa, Error, Maybe, NotFoundExt,
 };
 use reqwest::StatusCode;
 

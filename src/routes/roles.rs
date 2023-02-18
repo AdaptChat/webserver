@@ -1,16 +1,13 @@
 use crate::extract::Json;
 use crate::routes::NoContentResult;
 use crate::{extract::Auth, ratelimit::ratelimit, routes::RouteResult, Response};
-use axum::http::StatusCode;
-use axum::{extract::Path, handler::Handler, routing::get, Router};
-use essence::http::role::{CreateRolePayload, EditRolePayload};
-use essence::models::{ModelType, Permissions};
-use essence::snowflake::generate_snowflake;
-use essence::Error;
+use axum::{extract::Path, handler::Handler, http::StatusCode, routing::get, Router};
 use essence::{
     db::{get_pool, GuildDbExt, RoleDbExt},
-    models::Role,
-    NotFoundExt,
+    http::role::{CreateRolePayload, EditRolePayload},
+    models::{ModelType, Permissions, Role},
+    snowflake::generate_snowflake,
+    utoipa, Error, NotFoundExt,
 };
 
 fn validate_role_name(name: &str) -> Result<(), Error> {

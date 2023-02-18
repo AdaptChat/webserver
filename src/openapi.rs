@@ -1,8 +1,11 @@
 use crate::routes::{auth, channels, guilds, invites, members, messages, roles, users};
-use essence::{http, models};
-use utoipa::{
-    openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
-    Modify, OpenApi,
+use essence::{
+    http, models,
+    utoipa::{
+        self,
+        openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
+        Modify, OpenApi,
+    },
 };
 
 #[derive(OpenApi)]

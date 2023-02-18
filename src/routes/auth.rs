@@ -5,7 +5,7 @@ use essence::{
     db::{get_pool, AuthDbExt, UserDbExt},
     http::auth::{LoginRequest, LoginResponse, TokenRetrievalMethod},
     models::UserFlags,
-    Error, NotFoundExt,
+    utoipa, Error, NotFoundExt,
 };
 
 /// Generate Token (Login)

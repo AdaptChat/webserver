@@ -11,7 +11,7 @@ use essence::{
     db::{get_pool, GuildDbExt, InviteDbExt, MemberDbExt},
     http::{guild::GetGuildQuery, invite::CreateInvitePayload},
     models::{Invite, Member, Permissions, UserFlags},
-    Error, NotFoundExt,
+    utoipa, Error, NotFoundExt,
 };
 use rand::distributions::{Alphanumeric, DistString};
 

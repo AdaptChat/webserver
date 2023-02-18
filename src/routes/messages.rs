@@ -13,14 +13,12 @@ use axum::{
     routing::get,
     Router,
 };
-use essence::db::{MemberDbExt, UserDbExt};
-use essence::models::MemberOrUser;
 use essence::{
-    db::{get_pool, ChannelDbExt, GuildDbExt, MessageDbExt, RoleDbExt},
+    db::{get_pool, ChannelDbExt, GuildDbExt, MemberDbExt, MessageDbExt, RoleDbExt, UserDbExt},
     http::message::{CreateMessagePayload, EditMessagePayload, MessageHistoryQuery},
-    models::{Embed, Message, ModelType, Permissions},
+    models::{Embed, MemberOrUser, Message, ModelType, Permissions},
     snowflake::generate_snowflake,
-    Error, Maybe, NotFoundExt,
+    utoipa, Error, Maybe, NotFoundExt,
 };
 
 async fn maybe_assert_permissions(
