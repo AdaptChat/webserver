@@ -36,7 +36,3 @@ utoipa-swagger-ui = { git = "https://github.com/juhaku/utoipa", features = ["axu
 [features]
 default = []
 ws = ["dep:deadpool-lapin", "dep:bincode"]
-
-[patch."https://github.com/juhaku/utoipa"]
-utoipa-gen = { git = "https://github.com/jay3332/utoipa", branch = "patch-1" }
-
