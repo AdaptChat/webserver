@@ -1,6 +1,6 @@
 use bincode::Encode;
 use deadpool_lapin::{
-    lapin::{options::BasicPublishOptions, BasicProperties},
+    lapin::{options::BasicPublishOptions, BasicProperties, Channel},
     Object, Pool, Runtime,
 };
 use essence::Error;
@@ -13,15 +13,20 @@ pub mod prelude {
 
 /// AMQP connection pool
 pub static POOL: OnceLock<Pool> = OnceLock::new();
+/// AMQP mono-channel (might change in the future)
+pub static CHANNEL: OnceLock<Channel> = OnceLock::new();
 
 /// Connects to the amqp server and registers the pool.
-pub fn connect() -> Result<(), Box<dyn std::error::Error>> {
+pub async fn connect() -> Result<(), Box<dyn std::error::Error>> {
     let pool = deadpool_lapin::Config {
         url: Some("amqp://127.0.0.1:5672".to_string()),
         ..Default::default()
     }
     .create_pool(Some(Runtime::Tokio1))?;
 
+    CHANNEL
+        .set(pool.get().await?.create_channel().await?)
+        .unwrap();
     POOL.set(pool).expect("amqp pool called more than once");
     Ok(())
 }
@@ -49,15 +54,9 @@ pub async fn publish<T: Encode + Send>(
         }
     })?;
 
-    get_pool()
-        .await
-        .create_channel()
-        .await
-        .map_err(|err| Error::InternalError {
-            what: Some("amqp (ws downstream)".to_string()),
-            message: format!("unable to create channel: {err}"),
-            debug: Some(format!("{err:?}")),
-        })?
+    CHANNEL
+        .get()
+        .expect("amqp channel not initialized")
         .basic_publish(
             exchange,
             routing_key,
