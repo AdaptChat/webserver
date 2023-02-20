@@ -1,10 +1,14 @@
 use bincode::Encode;
 use deadpool_lapin::{
-    lapin::{options::BasicPublishOptions, BasicProperties, Channel},
+    lapin::{
+        options::BasicPublishOptions, publisher_confirm::PublisherConfirm, BasicProperties,
+        Channel, ChannelState, Error::InvalidChannelState,
+    },
     Object, Pool, Runtime,
 };
 use essence::Error;
 use std::sync::OnceLock;
+use tokio::sync::RwLock;
 
 pub mod prelude {
     pub use crate::amqp;
@@ -14,7 +18,7 @@ pub mod prelude {
 /// AMQP connection pool
 pub static POOL: OnceLock<Pool> = OnceLock::new();
 /// AMQP mono-channel (might change in the future)
-pub static CHANNEL: OnceLock<Channel> = OnceLock::new();
+pub static CHANNEL: OnceLock<RwLock<Channel>> = OnceLock::new();
 
 /// Connects to the amqp server and registers the pool.
 pub async fn connect() -> Result<(), Box<dyn std::error::Error>> {
@@ -25,7 +29,7 @@ pub async fn connect() -> Result<(), Box<dyn std::error::Error>> {
     .create_pool(Some(Runtime::Tokio1))?;
 
     CHANNEL
-        .set(pool.get().await?.create_channel().await?)
+        .set(RwLock::new(pool.get().await?.create_channel().await?))
         .unwrap();
     POOL.set(pool).expect("amqp pool called more than once");
     Ok(())
@@ -38,6 +42,23 @@ pub async fn get_pool() -> Object {
         .get()
         .await
         .expect("unable to get amqp pool")
+}
+
+async fn _publish<'a>(
+    channel: &'a Channel,
+    exchange: &str,
+    routing_key: &str,
+    payload: &[u8],
+) -> Result<PublisherConfirm, deadpool_lapin::lapin::Error> {
+    channel
+        .basic_publish(
+            exchange,
+            routing_key,
+            BasicPublishOptions::default(),
+            payload,
+            BasicProperties::default(),
+        )
+        .await
 }
 
 /// Sends a message to the amqp server.
@@ -54,22 +75,31 @@ pub async fn publish<T: Encode + Send>(
         }
     })?;
 
-    CHANNEL
-        .get()
-        .expect("amqp channel not initialized")
-        .basic_publish(
-            exchange,
-            routing_key,
-            BasicPublishOptions::default(),
-            &bytes,
-            BasicProperties::default(),
-        )
-        .await
-        .map_err(|err| Error::InternalError {
+    let shared = CHANNEL.get().expect("amqp channel not initialized");
+    let channel = shared.read().await;
+
+    if let Err(mut err) = _publish(&channel, exchange, routing_key, &bytes).await {
+        drop(channel);
+
+        if err == InvalidChannelState(ChannelState::Closed) {
+            match try {
+                let channel = get_pool().await.create_channel().await?;
+                _publish(&channel, exchange, routing_key, &bytes).await?;
+
+                *shared.write().await = channel;
+                Ok::<_, deadpool_lapin::lapin::Error>(())
+            } {
+                Ok(_) => return Ok(()),
+                Err(why) => err = why,
+            }
+        }
+
+        return Err(Error::InternalError {
             what: Some("amqp (ws downstream)".to_string()),
             message: format!("unable to publish message: {err}"),
             debug: Some(format!("{err:?}")),
-        })?;
+        });
+    }
 
     Ok(())
 }

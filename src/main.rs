@@ -9,6 +9,7 @@
 #![feature(is_some_and)]
 #![feature(once_cell)]
 #![feature(never_type)]
+#![feature(try_blocks)]
 
 #[macro_use]
 extern crate dotenv_codegen;
