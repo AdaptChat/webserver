@@ -42,7 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     essence::cache::setup();
     cdn::setup()?;
     #[cfg(feature = "ws")]
-    amqp::connect().await?;
+    amqp::connect()?;
 
     // Generate OpenAPI spec
     let mut spec = openapi::ApiSpec::openapi();
