@@ -2,7 +2,7 @@ use bincode::Encode;
 use deadpool_lapin::{
     lapin::{
         options::BasicPublishOptions, publisher_confirm::PublisherConfirm, BasicProperties,
-        Channel, ChannelState, Error::InvalidChannelState,
+        Channel, Error::InvalidChannelState,
     },
     Object, Pool, Runtime,
 };
@@ -81,7 +81,7 @@ pub async fn publish<T: Encode + Send>(
     if let Err(mut err) = _publish(&channel, exchange, routing_key, &bytes).await {
         drop(channel);
 
-        if err == InvalidChannelState(ChannelState::Closed) {
+        if matches!(err, InvalidChannelState(_)) {
             match try {
                 let channel = get_pool().await.create_channel().await?;
                 _publish(&channel, exchange, routing_key, &bytes).await?;
