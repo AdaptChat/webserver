@@ -6,7 +6,9 @@ use crate::{
     routes::{NoContentResult, RouteResult},
     Response,
 };
+use axum::extract::Query;
 use axum::{extract::Path, handler::Handler, http::StatusCode, routing::get, Router};
+use essence::http::invite::UseInviteQuery;
 use essence::{
     db::{get_pool, GuildDbExt, InviteDbExt, MemberDbExt},
     http::{guild::GetGuildQuery, invite::CreateInvitePayload},
@@ -138,6 +140,7 @@ pub async fn delete_guild_invite(
 #[utoipa::path(
     post,
     path = "/invites/{code}",
+    params(UseInviteQuery),
     responses(
         (status = OK, description = "Member object for the joined guild", body = Member),
         (status = UNAUTHORIZED, description = "Invalid token", body = Error),
@@ -149,6 +152,7 @@ pub async fn delete_guild_invite(
 pub async fn use_invite(
     Auth(user_id, flags): Auth,
     Path(code): Path<String>,
+    Query(query): Query<UseInviteQuery>,
 ) -> RouteResult<Member> {
     if flags.contains(UserFlags::BOT) {
         return Err(Response::from(Error::UnsupportedAuthMethod {
@@ -188,6 +192,7 @@ pub async fn use_invite(
                             ),
                             debug: None,
                         })?,
+                    nonce: query.nonce,
                 },
             );
 

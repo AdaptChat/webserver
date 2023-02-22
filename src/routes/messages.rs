@@ -176,7 +176,7 @@ pub async fn get_message_history(
 pub async fn create_message(
     Auth(user_id, _): Auth,
     Path(channel_id): Path<u64>,
-    Json(payload): Json<CreateMessagePayload>,
+    Json(mut payload): Json<CreateMessagePayload>,
 ) -> RouteResult<Message> {
     if let Some(ref content) = payload.content {
         validate_message_content(content)?;
@@ -190,6 +190,7 @@ pub async fn create_message(
     .await?;
 
     let mut db = get_pool();
+    let nonce = payload.nonce.take();
     let message_id = generate_snowflake(ModelType::Message, 0); // TODO: node id
     let message = db
         .create_message(channel_id, message_id, user_id, payload)
@@ -216,6 +217,7 @@ pub async fn create_message(
             user_id,
             OutboundMessage::MessageCreate {
                 message: message.clone(),
+                nonce,
             },
         )
         .await?;

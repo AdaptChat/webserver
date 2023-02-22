@@ -60,7 +60,7 @@ pub fn validate_guild_description(description: &str) -> Result<(), Error> {
 )]
 pub async fn create_guild(
     Auth(owner_id, _): Auth,
-    Json(payload): Json<CreateGuildPayload>,
+    Json(mut payload): Json<CreateGuildPayload>,
 ) -> RouteResult<Guild> {
     validate_guild_name(&payload.name)?;
     if let Some(ref desc) = payload.description {
@@ -74,6 +74,7 @@ pub async fn create_guild(
     let channel_id = with_model_type(guild_id, ModelType::Channel);
     let role_id = with_model_type(guild_id, ModelType::Role);
 
+    let nonce = payload.nonce.take();
     let guild = transaction
         .create_guild(guild_id, channel_id, role_id, owner_id, payload)
         .await?;
@@ -84,6 +85,7 @@ pub async fn create_guild(
         owner_id,
         OutboundMessage::GuildCreate {
             guild: guild.clone(),
+            nonce,
         },
     )
     .await?;
