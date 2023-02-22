@@ -1,8 +1,9 @@
 use bincode::Encode;
 use deadpool_lapin::{
     lapin::{
-        options::BasicPublishOptions, publisher_confirm::PublisherConfirm, BasicProperties,
+        options::{BasicPublishOptions, ExchangeDeclareOptions}, publisher_confirm::PublisherConfirm, BasicProperties,
         Channel, Error::InvalidChannelState,
+        ExchangeKind, types::FieldTable
     },
     Object, Pool, Runtime,
 };
@@ -50,6 +51,18 @@ async fn _publish<'a>(
     routing_key: &str,
     payload: &[u8],
 ) -> Result<PublisherConfirm, deadpool_lapin::lapin::Error> {
+    channel
+        .exchange_declare(
+            exchange.as_ref(),
+            ExchangeKind::Topic,
+            ExchangeDeclareOptions {
+                auto_delete: true,
+                ..Default::default()
+            },
+            FieldTable::default(),
+        )
+        .await?;
+
     channel
         .basic_publish(
             exchange,
