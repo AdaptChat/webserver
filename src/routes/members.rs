@@ -1,3 +1,5 @@
+#[cfg(feature = "ws")]
+use crate::amqp::prelude::*;
 use crate::{
     extract::{Auth, Json},
     ratelimit::ratelimit,
@@ -274,6 +276,27 @@ pub async fn leave_guild(Auth(user_id, _): Auth, Path(guild_id): Path<u64>) -> N
     }
 
     db.delete_member(guild_id, user_id).await?;
+
+    #[cfg(feature = "ws")]
+    {
+        let user_event = amqp::publish_user_event(
+            user_id,
+            OutboundMessage::GuildRemove {
+                guild_id,
+                info: MemberRemoveInfo::Leave,
+            },
+        );
+        let guild_event = amqp::publish_guild_event(
+            guild_id,
+            OutboundMessage::MemberRemove {
+                guild_id,
+                user_id,
+                info: MemberRemoveInfo::Leave,
+            },
+        );
+        tokio::try_join!(user_event, guild_event)?;
+    }
+
     Ok(StatusCode::NO_CONTENT)
 }
 

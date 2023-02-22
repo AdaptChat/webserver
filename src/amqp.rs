@@ -12,7 +12,7 @@ use tokio::sync::RwLock;
 
 pub mod prelude {
     pub use crate::amqp;
-    pub use essence::ws::OutboundMessage;
+    pub use essence::ws::{MemberRemoveInfo, OutboundMessage};
 }
 
 /// AMQP connection pool

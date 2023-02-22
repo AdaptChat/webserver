@@ -225,6 +225,17 @@ pub async fn delete_guild(
     }
 
     db.delete_guild(guild_id).await?;
+
+    #[cfg(feature = "ws")]
+    amqp::publish_guild_event(
+        guild_id,
+        OutboundMessage::GuildRemove {
+            guild_id,
+            info: MemberRemoveInfo::Delete,
+        },
+    )
+    .await?;
+
     Ok(StatusCode::NO_CONTENT)
 }
 

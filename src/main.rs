@@ -5,7 +5,7 @@
     clippy::doc_markdown,
     clippy::similar_names
 )]
-#![cfg_attr(all(feature = "ws", target_os = "linux"), allow(unused_variables))]
+#![cfg_attr(not(feature = "ws"), allow(unused_variables, unused_imports))]
 #![feature(is_some_and)]
 #![feature(once_cell)]
 #![feature(never_type)]

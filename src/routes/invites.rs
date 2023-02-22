@@ -168,16 +168,14 @@ pub async fn use_invite(
             let user_id = member.user_id();
             let guild_id = member.guild_id;
 
-            amqp::publish_guild_event(
+            let guild_event = amqp::publish_guild_event(
                 guild_id,
                 OutboundMessage::MemberJoin {
                     member,
                     invite: Some(invite),
                 },
-            )
-            .await?;
-
-            amqp::publish_user_event(
+            );
+            let user_event = amqp::publish_user_event(
                 user_id,
                 OutboundMessage::GuildCreate {
                     guild: db
@@ -191,10 +189,9 @@ pub async fn use_invite(
                             debug: None,
                         })?,
                 },
-            )
-            .await?;
+            );
 
-            Ok::<_, Error>(())
+            tokio::try_join!(guild_event, user_event)
         });
 
         member
