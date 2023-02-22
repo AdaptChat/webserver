@@ -1,9 +1,12 @@
 use bincode::Encode;
 use deadpool_lapin::{
     lapin::{
-        options::{BasicPublishOptions, ExchangeDeclareOptions}, publisher_confirm::PublisherConfirm, BasicProperties,
-        Channel, Error::InvalidChannelState,
-        ExchangeKind, types::FieldTable
+        options::{BasicPublishOptions, ExchangeDeclareOptions},
+        publisher_confirm::PublisherConfirm,
+        types::FieldTable,
+        BasicProperties, Channel,
+        Error::InvalidChannelState,
+        ExchangeKind,
     },
     Object, Pool, Runtime,
 };
@@ -48,6 +51,7 @@ pub async fn get_pool() -> Object {
 async fn _publish<'a>(
     channel: &'a Channel,
     exchange: &str,
+    auto_delete: bool,
     routing_key: &str,
     payload: &[u8],
 ) -> Result<PublisherConfirm, deadpool_lapin::lapin::Error> {
@@ -56,7 +60,7 @@ async fn _publish<'a>(
             exchange.as_ref(),
             ExchangeKind::Topic,
             ExchangeDeclareOptions {
-                auto_delete: true,
+                auto_delete,
                 ..Default::default()
             },
             FieldTable::default(),
@@ -77,6 +81,7 @@ async fn _publish<'a>(
 /// Sends a message to the amqp server.
 pub async fn publish<T: Encode + Send>(
     exchange: &str,
+    auto_delete: bool,
     routing_key: &str,
     data: T,
 ) -> essence::Result<()> {
@@ -91,13 +96,19 @@ pub async fn publish<T: Encode + Send>(
     let shared = CHANNEL.get().expect("amqp channel not initialized");
     let channel = shared.read().await;
 
-    if let Err(mut err) = _publish(&channel, exchange, routing_key, &bytes).await {
+    macro_rules! publish {
+        ($channel:expr) => {
+            _publish($channel, exchange, auto_delete, routing_key, &bytes).await
+        };
+    }
+
+    if let Err(mut err) = publish!(&channel) {
         drop(channel);
 
         if matches!(err, InvalidChannelState(_)) {
             match try {
                 let channel = get_pool().await.create_channel().await?;
-                _publish(&channel, exchange, routing_key, &bytes).await?;
+                publish!(&channel)?;
 
                 *shared.write().await = channel;
                 Ok::<_, deadpool_lapin::lapin::Error>(())
@@ -119,12 +130,12 @@ pub async fn publish<T: Encode + Send>(
 
 /// Sends a guild-related event to the amqp server.
 pub async fn publish_guild_event<T: Encode + Send>(guild_id: u64, event: T) -> essence::Result<()> {
-    publish(&guild_id.to_string(), "*", event).await
+    publish(&guild_id.to_string(), true, "*", event).await
 }
 
 /// Sends a user-related event to the amqp server.
 pub async fn publish_user_event<T: Encode + Send>(user_id: u64, event: T) -> essence::Result<()> {
-    publish("events", &user_id.to_string(), event).await
+    publish("events", false, &user_id.to_string(), event).await
 }
 
 /// Sends a guild-related event if `guild_id` is `Some`, otherwise fallsback to a user-related
