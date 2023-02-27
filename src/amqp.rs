@@ -130,7 +130,7 @@ pub async fn publish<T: Encode + Send>(
 
 /// Sends a guild-related event to the amqp server.
 pub async fn publish_guild_event<T: Encode + Send>(guild_id: u64, event: T) -> essence::Result<()> {
-    publish(&guild_id.to_string(), true, "*", event).await
+    publish(&guild_id.to_string(), true, "all", event).await
 }
 
 /// Sends a user-related event to the amqp server.
