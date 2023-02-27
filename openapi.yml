@@ -9,10 +9,8 @@ info:
     name: AGPL-3.0
   version: 0.1.0
 servers:
-- url: https://adapt.lambdabot.cf
+- url: https://api.adapt.chat
   description: Production
-- url: http://127.0.0.1:8077
-  description: Local
 paths:
   /channels/{channel_id}:
     get:
@@ -29,7 +27,6 @@ paths:
       - name: channel_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -70,7 +67,6 @@ paths:
       - name: channel_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -112,7 +108,6 @@ paths:
       - name: channel_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -210,13 +205,12 @@ paths:
 
           If ``true``, messages will be sorted from oldest to newest. If ``false``, messages will be
           sorted from newest to oldest.
-        required: true
+        required: false
         schema:
           type: boolean
       - name: channel_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -270,7 +264,6 @@ paths:
       - name: channel_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -323,14 +316,12 @@ paths:
       - name: channel_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
       - name: message_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -379,14 +370,12 @@ paths:
       - name: channel_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
       - name: message_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -428,14 +417,12 @@ paths:
       - name: channel_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
       - name: message_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -566,7 +553,6 @@ paths:
       - name: guild_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -611,7 +597,6 @@ paths:
       - name: guild_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -659,7 +644,6 @@ paths:
       - name: guild_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -717,7 +701,6 @@ paths:
       - name: guild_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -759,7 +742,6 @@ paths:
       - name: guild_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -818,7 +800,6 @@ paths:
       - name: guild_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -866,7 +847,6 @@ paths:
       - name: guild_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -925,14 +905,12 @@ paths:
       - name: guild_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
       - name: code
         in: path
         required: true
-        deprecated: false
         schema:
           type: string
       responses:
@@ -973,7 +951,6 @@ paths:
       - name: guild_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -1022,7 +999,6 @@ paths:
       - name: guild_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -1068,7 +1044,6 @@ paths:
       - name: guild_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -1111,7 +1086,6 @@ paths:
       - name: guild_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -1163,14 +1137,12 @@ paths:
       - name: guild_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
       - name: member_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -1216,14 +1188,12 @@ paths:
       - name: guild_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
       - name: member_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -1271,14 +1241,12 @@ paths:
       - name: guild_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
       - name: member_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -1334,7 +1302,6 @@ paths:
       - name: guild_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -1382,7 +1349,6 @@ paths:
       - name: guild_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -1439,14 +1405,12 @@ paths:
       - name: guild_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
       - name: role_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -1492,14 +1456,12 @@ paths:
       - name: guild_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
       - name: role_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -1540,14 +1502,12 @@ paths:
       - name: guild_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
       - name: role_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -1605,7 +1565,6 @@ paths:
       - name: code
         in: path
         required: true
-        deprecated: false
         schema:
           type: string
       responses:
@@ -1633,10 +1592,15 @@ paths:
         is returned. If the user is already in the guild, the existing member object is returned.
       operationId: use_invite
       parameters:
+      - name: nonce
+        in: query
+        description: The nonce to provide to the guild.
+        required: false
+        schema:
+          type: string
       - name: code
         in: path
         required: true
-        deprecated: false
         schema:
           type: string
       responses:
@@ -1697,6 +1661,219 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       deprecated: false
+  /relationships:
+    get:
+      tags:
+      - users
+      summary: Get Relationships
+      description: |-
+        Get Relationships
+
+        Fetches all relationships of the authenticated user.
+      operationId: get_relationships
+      responses:
+        '200':
+          description: List of relationships
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Relationship'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+  /relationships/blocks/{target_id}:
+    put:
+      tags:
+      - users
+      summary: Block User
+      description: |-
+        Block User
+
+        Blocks a user.
+      operationId: block_user
+      parameters:
+      - name: target_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: Relationship object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Relationship'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Relationship not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Cannot act on self
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+  /relationships/friends:
+    post:
+      tags:
+      - users
+      summary: Send Friend Requests
+      description: |-
+        Send Friend Requests
+
+        Requests to add a user as a friend by their username and discriminator.
+      operationId: add_friend
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendFriendRequestPayload'
+        required: true
+      responses:
+        '200':
+          description: Relationship object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Relationship'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Cannot act on self
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+  /relationships/friends/{target_id}:
+    put:
+      tags:
+      - users
+      summary: Accept Friend Request
+      description: |-
+        Accept Friend Request
+
+        Accepts an incoming friend request.
+      operationId: accept_friend_request
+      parameters:
+      - name: target_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: Relationship object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Relationship'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Relationship not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Cannot act on self
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+  /relationships/{target_id}:
+    delete:
+      tags:
+      - users
+      summary: Delete Relationship
+      description: |-
+        Delete Relationship
+
+        Deletes a relationship with a user. This includes:
+        * Revoking outgoing friend requests
+        * Declining incoming friend requests
+        * Unfriending users
+        * Unblocking users (unidirectional)
+      operationId: delete_relationship
+      parameters:
+      - name: target_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '204':
+          description: Relationship deleted
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Relationship not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Cannot act on self
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
   /users:
     post:
       tags:
@@ -1849,7 +2026,6 @@ paths:
       - name: user_id
         in: path
         required: true
-        deprecated: false
         schema:
           type: integer
           format: int64
@@ -1925,18 +2101,8 @@ components:
           description: The new password of the user.
     Channel:
       oneOf:
-      - type: object
-        required:
-        - Guild
-        properties:
-          Guild:
-            $ref: '#/components/schemas/GuildChannel'
-      - type: object
-        required:
-        - Dm
-        properties:
-          Dm:
-            $ref: '#/components/schemas/DmChannel'
+      - $ref: '#/components/schemas/GuildChannel'
+      - $ref: '#/components/schemas/DmChannel'
       description: Represents any channel.
     ChannelType:
       type: string
@@ -1954,8 +2120,6 @@ components:
       allOf:
       - $ref: '#/components/schemas/User'
       - type: object
-        required:
-        - relationships
         properties:
           email:
             type: string
@@ -1964,10 +2128,6 @@ components:
               The associated email of the client's account.
 
               If the client is a bot, this is `None`.
-          relationships:
-            type: array
-            items:
-              $ref: '#/components/schemas/Relationship'
       description: |-
         Represents user info about the client. This has other information that is not available to the
         public, such as emails, guilds, and relationships (friends and blocked users).
@@ -2055,6 +2215,7 @@ components:
             type: array
             items:
               $ref: '#/components/schemas/PermissionOverwrite'
+            description: A list of permission overwrites to apply to the channel, if any.
           parent_id:
             type: integer
             format: int64
@@ -2082,6 +2243,11 @@ components:
         name:
           type: string
           description: The name of the guild. Must be between 2 and 100 characters.
+        nonce:
+          type: string
+          description: |-
+            A nonce to include with the guild. This is not stored and can be used to identify the
+            guild later on (it is relayed through the websocket).
         public:
           type: boolean
           description: Whether the guild should be public or not. Defaults to `false`.
@@ -2116,6 +2282,9 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Embed'
+          description: |-
+            A list of rich embeds to send with the message. Leave empty to send no embeds. If specified,
+            this takes a maximum of 10 embeds.
         nonce:
           type: string
           description: |-
@@ -2249,7 +2418,7 @@ components:
             items:
               type: integer
               format: int64
-              description: A list of recipients in the group chat by user ID.
+            description: A list of recipients in the group chat by user ID.
           topic:
             type: string
             description: The topic of the group chat, if any.
@@ -2345,16 +2514,16 @@ components:
           items:
             type: integer
             format: int64
-            description: |-
-              If provided, this is a bulk overwrite of the member's roles. Any roles not in this list
-              will be removed from the member, and any roles in this list that are managable by the
-              user will be added to the member (that is, if the role isn't managed and the user's top role
-              is higher than the role).
+          description: |-
+            If provided, this is a bulk overwrite of the member's roles. Any roles not in this list
+            will be removed from the member, and any roles in this list that are managable by the
+            user will be added to the member (that is, if the role isn't managed and the user's top role
+            is higher than the role).
 
-              If any role is not found, a 404 will be returned.
+            If any role is not found, a 404 will be returned.
 
-              The default role will always be added to the member, regardless of whether it is in this
-              list.
+            The default role will always be added to the member, regardless of whether it is in this
+            list.
     EditMessagePayload:
       type: object
       description: Payload sent to edit a message.
@@ -2367,6 +2536,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Embed'
+          description: |-
+            A list of rich embeds to send with the message.
+
+            This will overwrite any existing embeds if specified.
+            This wlil remove all embeds if set to either an empty list or explicitly set to `null`.
     EditRolePayload:
       type: object
       description: Payload sent to edit a role.
@@ -2440,6 +2614,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EmbedField'
+          description: A list of fields in the embed.
         footer:
           $ref: '#/components/schemas/EmbedFooter'
         hue:
@@ -2797,6 +2972,37 @@ components:
             enum:
             - cannot_leave_as_owner
       - type: object
+        description: You cannot perform the requested action on yourself.
+        required:
+        - message
+        - type
+        properties:
+          message:
+            type: string
+            description: The error message.
+          type:
+            type: string
+            enum:
+            - cannot_act_on_self
+      - type: object
+        description: You cannot add bots as friends.
+        required:
+        - target_id
+        - message
+        - type
+        properties:
+          message:
+            type: string
+            description: The error message.
+          target_id:
+            type: integer
+            format: int64
+            description: The ID of the bot you are trying to friend.
+          type:
+            type: string
+            enum:
+            - cannot_friend_bots
+      - type: object
         description: Something was already taken, e.g. a username or email.
         required:
         - what
@@ -2813,6 +3019,23 @@ components:
           what:
             type: string
             description: What was already taken.
+      - type: object
+        description: Something already exists, e.g. a relationship.
+        required:
+        - what
+        - message
+        - type
+        properties:
+          message:
+            type: string
+            description: The error message.
+          type:
+            type: string
+            enum:
+            - already_exists
+          what:
+            type: string
+            description: What already exists.
       - type: object
         description: You are sending requests too quickly are you are being rate limited.
         required:
@@ -2866,14 +3089,38 @@ components:
             type: array
             items:
               $ref: '#/components/schemas/GuildChannel'
+            description: |-
+              A list of resolved channels in the guild.
+
+              This is only available during the following events:
+              * Fetching the guild directly
+              * The client retrieves the response after a request to join a guild through an invite
+              * The client receives a ready event containing all guild data through the gateway.
+              * The client receives a guild create event through the gateway.
           members:
             type: array
             items:
               $ref: '#/components/schemas/Member'
+            description: |-
+              A list of resolved members in the guild.
+
+              This is only available during the following events:
+              * Fetching the guild directly
+              * The client retrieves the response after a request to join a guild through an invite
+              * The client receives a ready event containing all guild data through the gateway.
+              * The client receives a guild create event through the gateway.
           roles:
             type: array
             items:
               $ref: '#/components/schemas/Role'
+            description: |-
+              A list of resolved roles in the guild.
+
+              This is only available during the following events:
+              * Fetching the guild directly
+              * The client retrieves the response after a request to join a guild through an invite
+              * The client receives a ready event containing all guild data through the gateway.
+              * The client receives a guild create event through the gateway.
       description: Represents a guild with all information, sometimes referred to as a server.
     GuildChannel:
       allOf:
@@ -2901,6 +3148,7 @@ components:
             type: array
             items:
               $ref: '#/components/schemas/PermissionOverwrite'
+            description: The permission overwrites for this channel.
           parent_id:
             type: integer
             format: int64
@@ -2984,9 +3232,6 @@ components:
       description: Represents the type along with type-specific info of a guild channel.
       discriminator:
         propertyName: type
-    GuildFlags:
-      type: integer
-      format: int32
     GuildFolder:
       type: object
       description: Represents a folder that contains a collection of guilds. This is only shown in the client's UI.
@@ -2998,13 +3243,18 @@ components:
           items:
             type: integer
             format: int64
-            description: |-
-              A list of guild IDs representing guilds that were placed in this folder, in order from
-              top to bottom.
+          description: |-
+            A list of guild IDs representing guilds that were placed in this folder, in order from
+            top to bottom.
         path:
           type: array
           items:
             $ref: '#/components/schemas/GuildFolderInfo'
+          description: |-
+            The path of the folder, with the top-level folder first.
+
+            This is `None` if this folder represents the collection of guilds
+            that are not in any folders, or in other terms, the root folder.
     GuildFolderInfo:
       type: object
       description: |-
@@ -3120,25 +3370,15 @@ components:
       - invalid_json
     MaybePartialUser:
       oneOf:
+      - $ref: '#/components/schemas/User'
       - type: object
+        description: A user with only an ID.
         required:
-        - Full
+        - id
         properties:
-          Full:
-            $ref: '#/components/schemas/User'
-      - type: object
-        required:
-        - Partial
-        properties:
-          Partial:
-            type: object
-            description: A user with only an ID.
-            required:
-            - id
-            properties:
-              id:
-                type: integer
-                format: int64
+          id:
+            type: integer
+            format: int64
       description: Potentially a partial user.
     Member:
       allOf:
@@ -3164,22 +3404,12 @@ components:
             items:
               type: integer
               format: int64
-              description: A list of IDs of the roles that the member has. This could be `None` in some cases.
+            description: A list of IDs of the roles that the member has. This could be `None` in some cases.
       description: Represents a member of a guild. Members are user objects associated with a guild.
     MemberOrUser:
       oneOf:
-      - type: object
-        required:
-        - Member
-        properties:
-          Member:
-            $ref: '#/components/schemas/Member'
-      - type: object
-        required:
-        - User
-        properties:
-          User:
-            $ref: '#/components/schemas/User'
+      - $ref: '#/components/schemas/Member'
+      - $ref: '#/components/schemas/User'
       description: Represents either a member or a user.
     Message:
       allOf:
@@ -3197,6 +3427,7 @@ components:
             type: array
             items:
               $ref: '#/components/schemas/Attachment'
+            description: A list of attachments included in this message.
           author:
             $ref: '#/components/schemas/MemberOrUser'
           author_id:
@@ -3216,19 +3447,13 @@ components:
             type: array
             items:
               $ref: '#/components/schemas/Embed'
+            description: A list of embeds included in this message.
           flags:
             $ref: '#/components/schemas/MessageFlags'
           id:
             type: integer
             format: int64
             description: The snowflake ID of the message.
-          nonce:
-            type: string
-            description: |-
-              A custom nonce for this message. This is a random string that if used, a message with the
-              same nonce will be dispatched by the websocket, indicating that the message was sent.
-
-              This is only used once and it is not stored.
           revision_id:
             type: integer
             format: int64
@@ -3246,9 +3471,6 @@ components:
       - center
       - right
       - inline
-    MessageFlags:
-      type: integer
-      format: int32
     MessageInfo:
       oneOf:
       - type: object
@@ -3260,48 +3482,63 @@ components:
             enum:
             - default
       - type: object
-        description: A join message, sent when a user joins either a group DM or a guild.
         required:
-        - user_id
         - type
+        - metadata
         properties:
+          metadata:
+            type: object
+            description: A join message, sent when a user joins either a group DM or a guild.
+            required:
+            - user_id
+            properties:
+              user_id:
+                type: integer
+                format: int64
+                description: The ID of the user who joined.
           type:
             type: string
             enum:
             - join
-          user_id:
-            type: integer
-            format: int64
-            description: The ID of the user who joined.
       - type: object
-        description: A leave message, sent when a user leaves either a group DM or a guild.
         required:
-        - user_id
         - type
+        - metadata
         properties:
+          metadata:
+            type: object
+            description: A leave message, sent when a user leaves either a group DM or a guild.
+            required:
+            - user_id
+            properties:
+              user_id:
+                type: integer
+                format: int64
+                description: The ID of the user who left.
           type:
             type: string
             enum:
             - leave
-          user_id:
-            type: integer
-            format: int64
-            description: The ID of the user who left.
       - type: object
-        description: A message that indicates another message has been pinned.
         required:
-        - pinned_message_id
-        - pinned_by
         - type
+        - metadata
         properties:
-          pinned_by:
-            type: integer
-            format: int64
-            description: The ID of the user that pinned the message.
-          pinned_message_id:
-            type: integer
-            format: int64
-            description: The ID of the message that was pinned.
+          metadata:
+            type: object
+            description: A message that indicates another message has been pinned.
+            required:
+            - pinned_message_id
+            - pinned_by
+            properties:
+              pinned_by:
+                type: integer
+                format: int64
+                description: The ID of the user that pinned the message.
+              pinned_message_id:
+                type: integer
+                format: int64
+                description: The ID of the message that was pinned.
           type:
             type: string
             enum:
@@ -3379,29 +3616,24 @@ components:
           $ref: '#/components/schemas/Permissions'
         deny:
           $ref: '#/components/schemas/Permissions'
-    Permissions:
-      type: integer
-      format: int64
     Relationship:
       type: object
       description: Represents a relationship that a user has with another user.
       required:
-      - id
+      - user
       - type
       properties:
-        id:
-          type: integer
-          format: int64
-          description: The ID of the user that this relationship is with.
         type:
           $ref: '#/components/schemas/RelationshipType'
+        user:
+          $ref: '#/components/schemas/User'
     RelationshipType:
       type: string
-      description: |-
-        Represents a client user with addition to their password.
-        Represents the type of relationship a user has with another user.
+      description: Represents the type of relationship a user has with another user.
       enum:
       - friend
+      - outgoing_request
+      - incoming_request
       - blocked
     Role:
       type: object
@@ -3445,9 +3677,6 @@ components:
             The backend will try its best to keep all role positions unique, but on the event two
             collide due to something such as a data race, then the true position of these roles will
             not be predictable, and will likely be in the order of model creation.
-    RoleFlags:
-      type: integer
-      format: int32
     TextBasedGuildChannelInfo:
       type: object
       description: Represents common information found in text-based guild channels.
@@ -3515,7 +3744,7 @@ components:
         username:
           type: string
           description: The username of the user.
-    UserFlags:
+    bitflags:
       type: integer
       format: int32
   securitySchemes:

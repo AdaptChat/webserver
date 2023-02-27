@@ -11,7 +11,7 @@ use axum::{
     extract::Path,
     handler::Handler,
     http::StatusCode,
-    routing::{get, post, put},
+    routing::{delete, get, post, put},
     Router,
 };
 use essence::{
@@ -220,6 +220,15 @@ pub async fn get_user(_auth: Auth, Path(user_id): Path<u64>) -> RouteResult<User
 /// Get Relationships
 ///
 /// Fetches all relationships of the authenticated user.
+#[utoipa::path(
+    get,
+    path = "/relationships",
+    responses(
+        (status = OK, description = "List of relationships", body = Vec<Relationship>),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+    ),
+    security(("token" = [])),
+)]
 pub async fn get_relationships(Auth(user_id, _): Auth) -> RouteResult<Vec<Relationship>> {
     let relationships = get_pool().fetch_relationships(user_id).await?;
 
@@ -256,6 +265,19 @@ async fn publish_relationship_events(
 /// Send Friend Requests
 ///
 /// Requests to add a user as a friend by their username and discriminator.
+#[utoipa::path(
+    post,
+    path = "/relationships/friends",
+    request_body = SendFriendRequestPayload,
+    responses(
+        (status = OK, description = "Relationship object", body = Relationship),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = BAD_REQUEST, description = "Invalid payload", body = Error),
+        (status = NOT_FOUND, description = "User not found", body = Error),
+        (status = CONFLICT, description = "Cannot act on self", body = Error),
+    ),
+    security(("token" = [])),
+)]
 pub async fn add_friend(
     Auth(user_id, flags): Auth,
     Json(payload): Json<SendFriendRequestPayload>,
@@ -326,6 +348,17 @@ pub async fn add_friend(
 /// Accept Friend Request
 ///
 /// Accepts an incoming friend request.
+#[utoipa::path(
+    put,
+    path = "/relationships/friends/{target_id}",
+    responses(
+        (status = OK, description = "Relationship object", body = Relationship),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = NOT_FOUND, description = "Relationship not found", body = Error),
+        (status = CONFLICT, description = "Cannot act on self", body = Error),
+    ),
+    security(("token" = [])),
+)]
 pub async fn accept_friend_request(
     Auth(user_id, _): Auth,
     Path(target_id): Path<u64>,
@@ -359,6 +392,17 @@ pub async fn accept_friend_request(
 /// Block User
 ///
 /// Blocks a user.
+#[utoipa::path(
+    put,
+    path = "/relationships/blocks/{target_id}",
+    responses(
+        (status = OK, description = "Relationship object", body = Relationship),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = NOT_FOUND, description = "Relationship not found", body = Error),
+        (status = CONFLICT, description = "Cannot act on self", body = Error),
+    ),
+    security(("token" = [])),
+)]
 pub async fn block_user(
     Auth(user_id, _): Auth,
     Path(target_id): Path<u64>,
@@ -391,6 +435,17 @@ pub async fn block_user(
 /// * Declining incoming friend requests
 /// * Unfriending users
 /// * Unblocking users (unidirectional)
+#[utoipa::path(
+    delete,
+    path = "/relationships/{target_id}",
+    responses(
+        (status = NO_CONTENT, description = "Relationship deleted"),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = NOT_FOUND, description = "Relationship not found", body = Error),
+        (status = CONFLICT, description = "Cannot act on self", body = Error),
+    ),
+    security(("token" = [])),
+)]
 pub async fn delete_relationship(
     Auth(user_id, _): Auth,
     Path(target_id): Path<u64>,
@@ -446,12 +501,15 @@ pub fn router() -> Router {
             post(add_friend.layer(ratelimit!(3, 10))),
         )
         .route(
-            "/relationships/blocks",
-            post(block_user.layer(ratelimit!(3, 10))),
+            "/relationships/friends/:target_id",
+            put(accept_friend_request.layer(ratelimit!(5, 5))),
+        )
+        .route(
+            "/relationships/blocks/:target_id",
+            put(block_user.layer(ratelimit!(3, 10))),
         )
         .route(
             "/relationships/:target_id",
-            put(accept_friend_request.layer(ratelimit!(5, 5)))
-                .delete(delete_relationship.layer(ratelimit!(5, 5))),
+            delete(delete_relationship.layer(ratelimit!(5, 5))),
         )
 }
