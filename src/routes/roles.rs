@@ -1,6 +1,9 @@
-use crate::extract::Json;
-use crate::routes::NoContentResult;
-use crate::{extract::Auth, ratelimit::ratelimit, routes::RouteResult, Response};
+use crate::{
+    extract::{Auth, Json},
+    ratelimit::ratelimit,
+    routes::{NoContentResult, RouteResult},
+    Response,
+};
 use axum::{extract::Path, handler::Handler, http::StatusCode, routing::get, Router};
 use essence::{
     db::{get_pool, GuildDbExt, RoleDbExt},

@@ -1,3 +1,5 @@
+#[cfg(feature = "ws")]
+use crate::amqp::prelude::*;
 use crate::{
     cdn::upload_user_avatar,
     extract::{Auth, Json},
@@ -9,14 +11,17 @@ use axum::{
     extract::Path,
     handler::Handler,
     http::StatusCode,
-    routing::{get, post},
+    routing::{get, post, put},
     Router,
 };
 use essence::{
     auth::generate_token,
     db::{get_pool, AuthDbExt, UserDbExt},
-    http::user::{CreateUserPayload, CreateUserResponse, DeleteUserPayload, EditUserPayload},
-    models::{ClientUser, ModelType, User, UserFlags},
+    http::{
+        user::SendFriendRequestPayload,
+        user::{CreateUserPayload, CreateUserResponse, DeleteUserPayload, EditUserPayload},
+    },
+    models::{ClientUser, ModelType, Relationship, RelationshipType, User, UserFlags},
     snowflake::generate_snowflake,
     utoipa, Error, Maybe, NotFoundExt,
 };
@@ -212,6 +217,216 @@ pub async fn get_user(_auth: Auth, Path(user_id): Path<u64>) -> RouteResult<User
     Ok(Response::ok(user))
 }
 
+/// Get Relationships
+///
+/// Fetches all relationships of the authenticated user.
+pub async fn get_relationships(Auth(user_id, _): Auth) -> RouteResult<Vec<Relationship>> {
+    let relationships = get_pool().fetch_relationships(user_id).await?;
+
+    Ok(Response::ok(relationships))
+}
+
+#[cfg(feature = "ws")]
+async fn publish_relationship_events(
+    user_id: u64,
+    target_id: u64,
+    outgoing: Relationship,
+    incoming: Option<Relationship>,
+) -> essence::Result<()> {
+    let outgoing = amqp::publish_user_event(
+        user_id,
+        OutboundMessage::RelationshipCreate {
+            relationship: outgoing,
+        },
+    );
+    if let Some(incoming) = incoming {
+        let incoming = amqp::publish_user_event(
+            target_id,
+            OutboundMessage::RelationshipCreate {
+                relationship: incoming,
+            },
+        );
+        tokio::try_join!(outgoing, incoming)?;
+    } else {
+        outgoing.await?;
+    }
+    Ok(())
+}
+
+/// Send Friend Requests
+///
+/// Requests to add a user as a friend by their username and discriminator.
+pub async fn add_friend(
+    Auth(user_id, flags): Auth,
+    Json(payload): Json<SendFriendRequestPayload>,
+) -> RouteResult<Relationship> {
+    if flags.contains(UserFlags::BOT) {
+        return Err(Response::from(Error::UnsupportedAuthMethod {
+            message: String::from(
+                "This user is a bot account, but this endpoint can only be used by user accounts.",
+            ),
+        }));
+    }
+
+    let db = get_pool();
+    let target = db
+        .fetch_user_by_tag(&payload.username, payload.discriminator)
+        .await?
+        .ok_or_not_found(
+            "user",
+            format!(
+                "User with tag {}#{} does not exist",
+                payload.username, payload.discriminator
+            ),
+        )?;
+    if target.id == user_id {
+        return Err(Response::from(Error::CannotActOnSelf {
+            message: "You cannot send friend requests to yourself.".to_string(),
+        }));
+    }
+    if target.flags.contains(UserFlags::BOT) {
+        return Err(Response::from(Error::CannotFriendBots {
+            target_id: target.id,
+            message: "You cannot send friend requests to bot accounts.".to_string(),
+        }));
+    }
+
+    match db.fetch_relationship_type(user_id, target.id).await? {
+        Some(RelationshipType::Friend) => Err("You are already friends with this user."),
+        Some(RelationshipType::OutgoingRequest) => {
+            Err("You have already sent a friend request to this user.")
+        }
+        Some(RelationshipType::IncomingRequest) => {
+            return accept_friend_request(Auth(user_id, flags), Path(target.id)).await;
+        }
+        Some(RelationshipType::Blocked) => Err(
+            "You have blocked this user, you should unblock them before adding them as a friend.",
+        ),
+        None => Ok(()),
+    }
+    .map_err(|message| Error::AlreadyExists {
+        what: "relationship".to_string(),
+        message: message.to_string(),
+    })?;
+
+    let mut transaction = db.begin().await?;
+    let (outgoing, incoming) = transaction
+        .create_relationship(user_id, target.id, RelationshipType::OutgoingRequest)
+        .await
+        .map_err(Response::from)?;
+
+    transaction.commit().await?;
+
+    #[cfg(feature = "ws")]
+    publish_relationship_events(user_id, target.id, outgoing.clone(), incoming).await?;
+
+    Ok(Response::ok(outgoing))
+}
+
+/// Accept Friend Request
+///
+/// Accepts an incoming friend request.
+pub async fn accept_friend_request(
+    Auth(user_id, _): Auth,
+    Path(target_id): Path<u64>,
+) -> RouteResult<Relationship> {
+    let db = get_pool();
+    match db.fetch_relationship_type(user_id, target_id).await? {
+        Some(RelationshipType::IncomingRequest) => Ok(()),
+        Some(RelationshipType::Friend) => Err(Response::from(Error::AlreadyExists {
+            what: "relationship".to_string(),
+            message: "You are already friends with this user.".to_string(),
+        })),
+        _ => Err(Response::from(Error::NotFound {
+            entity: "relationship".to_string(),
+            message: "You do not have an incoming friend request from this user.".to_string(),
+        })),
+    }?;
+
+    let mut transaction = db.begin().await?;
+    let (outgoing, incoming) = transaction
+        .create_relationship(user_id, target_id, RelationshipType::Friend)
+        .await?;
+
+    transaction.commit().await?;
+
+    #[cfg(feature = "ws")]
+    publish_relationship_events(user_id, target_id, outgoing.clone(), incoming).await?;
+
+    Ok(Response::ok(outgoing))
+}
+
+/// Block User
+///
+/// Blocks a user.
+pub async fn block_user(
+    Auth(user_id, _): Auth,
+    Path(target_id): Path<u64>,
+) -> RouteResult<Relationship> {
+    let db = get_pool();
+    if db.fetch_relationship_type(user_id, target_id).await? == Some(RelationshipType::Blocked) {
+        return Err(Response::from(Error::AlreadyExists {
+            what: "relationship".to_string(),
+            message: "You have already blocked this user.".to_string(),
+        }));
+    }
+
+    let mut transaction = db.begin().await?;
+    let (outgoing, incoming) = transaction
+        .create_relationship(user_id, target_id, RelationshipType::Blocked)
+        .await?;
+
+    transaction.commit().await?;
+
+    #[cfg(feature = "ws")]
+    publish_relationship_events(user_id, target_id, outgoing.clone(), incoming).await?;
+
+    Ok(Response::ok(outgoing))
+}
+
+/// Delete Relationship
+///
+/// Deletes a relationship with a user. This includes:
+/// * Revoking outgoing friend requests
+/// * Declining incoming friend requests
+/// * Unfriending users
+/// * Unblocking users (unidirectional)
+pub async fn delete_relationship(
+    Auth(user_id, _): Auth,
+    Path(target_id): Path<u64>,
+) -> NoContentResult {
+    let db = get_pool();
+    let mut transaction = db.begin().await?;
+
+    let affected = transaction.delete_relationship(user_id, target_id).await?;
+    if affected == 0 {
+        return Err(Response::from(Error::NotFound {
+            entity: "relationship".to_string(),
+            message: "You do not have a relationship with this user.".to_string(),
+        }));
+    }
+
+    #[cfg(feature = "ws")]
+    {
+        let outgoing = amqp::publish_user_event(
+            user_id,
+            OutboundMessage::RelationshipRemove { user_id: target_id },
+        );
+        if affected > 1 {
+            let incoming = amqp::publish_user_event(
+                target_id,
+                OutboundMessage::RelationshipRemove { user_id },
+            );
+            tokio::try_join!(outgoing, incoming)?;
+        } else {
+            outgoing.await?;
+        }
+    }
+
+    transaction.commit().await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub fn router() -> Router {
     Router::new()
         .route("/users", post(create_user.layer(ratelimit!(3, 15))))
@@ -222,4 +437,21 @@ pub fn router() -> Router {
                 .delete(delete_user.layer(ratelimit!(2, 30))),
         )
         .route("/users/:user_id", get(get_user.layer(ratelimit!(3, 5))))
+        .route(
+            "/relationships",
+            get(get_relationships.layer(ratelimit!(3, 6))),
+        )
+        .route(
+            "/relationships/friends",
+            post(add_friend.layer(ratelimit!(3, 10))),
+        )
+        .route(
+            "/relationships/blocks",
+            post(block_user.layer(ratelimit!(3, 10))),
+        )
+        .route(
+            "/relationships/:target_id",
+            put(accept_friend_request.layer(ratelimit!(5, 5)))
+                .delete(delete_relationship.layer(ratelimit!(5, 5))),
+        )
 }
