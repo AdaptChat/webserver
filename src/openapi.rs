@@ -78,6 +78,7 @@ use essence::{
         http::user::DeleteUserPayload,
         http::user::ChangeEmailPayload,
         http::user::ChangePasswordPayload,
+        http::user::SendFriendRequestPayload,
         models::TextBasedGuildChannelInfo,
         models::ChannelType,
         models::GuildChannelInfo,
