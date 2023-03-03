@@ -142,7 +142,6 @@ async fn upload(
 
 /// Uploads a user avatar to the CDN and returns its URL.
 pub async fn upload_user_avatar(user_id: u64, image_data: &str) -> essence::Result<String> {
-    const CHARSET: &[u8] = b"0123456789abdcdef";
     let (bytes, ext) = data_scheme_to_bytes(Some("avatar"), image_data, true, 4_000_000)?;
 
     let url = upload(

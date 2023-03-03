@@ -72,10 +72,7 @@ impl<S> Ratelimit<S> {
             let mut response = Response::from(Error::Ratelimited {
                 retry_after: retry_after.as_secs_f32(),
                 ip: ip.to_string(),
-                message: format!(
-                    "You are being rate limited. Try again in {:?}.",
-                    retry_after,
-                ),
+                message: format!("You are being rate limited. Try again in {retry_after:?}.",),
             })
             .into_response();
 
@@ -118,19 +115,16 @@ where
     }
 
     fn call(&mut self, req: Request<Body>) -> Self::Future {
-        let ip = match get_ip(&req) {
-            Some(ip) => ip,
-            None => {
-                return Box::pin(async move {
-                    Ok(Response::from(Error::MalformedIp {
-                        message: String::from(
-                            "Could not resolve an IP address from the request. \
-                            We require a valid IP address to protect us from DoS attacks.",
-                        ),
-                    })
-                    .into_response())
-                });
-            }
+        let Some(ip) = get_ip(&req) else {
+            return Box::pin(async move {
+                Ok(Response::from(Error::MalformedIp {
+                    message: String::from(
+                        "Could not resolve an IP address from the request. \
+                        We require a valid IP address to protect us from DoS attacks.",
+                    ),
+                })
+                .into_response())
+            });
         };
 
         match self.handle_ratelimit(ip) {

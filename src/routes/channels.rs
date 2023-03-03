@@ -6,7 +6,13 @@ use crate::{
     routes::{NoContentResult, RouteResult},
     Response,
 };
-use axum::{extract::Path, handler::Handler, http::StatusCode, routing::get, Router};
+use axum::{
+    extract::Path,
+    handler::Handler,
+    http::StatusCode,
+    routing::{get, put},
+    Router,
+};
 use essence::{
     db::{get_pool, ChannelDbExt, GuildDbExt},
     http::channel::{CreateGuildChannelInfo, CreateGuildChannelPayload, EditChannelPayload},
@@ -283,6 +289,96 @@ pub async fn delete_channel(
     Ok(StatusCode::NO_CONTENT)
 }
 
+async fn send_typing(
+    user_id: u64,
+    channel_id: u64,
+    #[cfg(feature = "ws")] outbound: OutboundMessage,
+) -> NoContentResult {
+    let db = get_pool();
+    let (guild_id, _, kind) = db
+        .inspect_channel(channel_id)
+        .await?
+        .ok_or_not_found("channel", format!("Channel with ID {channel_id} not found"))?;
+
+    if kind.is_guild() {
+        db.assert_member_has_permissions(
+            guild_id.unwrap(),
+            user_id,
+            Some(channel_id),
+            Permissions::SEND_MESSAGES,
+        )
+        .await?;
+    } else {
+        db.assert_user_is_recipient(channel_id, user_id).await?;
+    }
+
+    #[cfg(feature = "ws")]
+    amqp::publish_event(guild_id, user_id, outbound).await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Start Typing
+///
+/// Triggers a typing indicator for the specified channel. The typing indicator should last until
+/// one of the following events occur:
+///
+/// * 10 seconds have passed since the typing indicator was triggered
+/// * The user sends a message in the channel
+/// * A `TypingStop` event is received for the channel
+#[utoipa::path(
+    put,
+    path = "/channels/{channel_id}/typing",
+    responses(
+        (status = NO_CONTENT, description = "Typing indicator sent"),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = FORBIDDEN, description = "Missing permissions", body = Error),
+        (status = NOT_FOUND, description = "Channel not found", body = Error),
+    ),
+    security(("token" = [])),
+)]
+pub async fn start_typing(Auth(user_id, _): Auth, Path(channel_id): Path<u64>) -> NoContentResult {
+    send_typing(
+        user_id,
+        channel_id,
+        #[cfg(feature = "ws")]
+        OutboundMessage::TypingStart {
+            channel_id,
+            user_id,
+        },
+    )
+    .await
+}
+
+/// Stop Typing
+///
+/// Stops a typing indicator forcefully for the specified channel. Typing indicators should be
+/// automatically stopped when a message is sent or when 10 seconds have passed since the typing
+/// indicator was triggered.
+#[utoipa::path(
+    delete,
+    path = "/channels/{channel_id}/typing",
+    responses(
+        (status = NO_CONTENT, description = "Typing indicator sent"),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = FORBIDDEN, description = "Missing permissions", body = Error),
+        (status = NOT_FOUND, description = "Channel not found", body = Error),
+    ),
+    security(("token" = [])),
+)]
+pub async fn stop_typing(Auth(user_id, _): Auth, Path(channel_id): Path<u64>) -> NoContentResult {
+    send_typing(
+        user_id,
+        channel_id,
+        #[cfg(feature = "ws")]
+        OutboundMessage::TypingStop {
+            channel_id,
+            user_id,
+        },
+    )
+    .await
+}
+
 pub fn router() -> Router {
     Router::new()
         .route(
@@ -295,5 +391,9 @@ pub fn router() -> Router {
             get(get_channel.layer(ratelimit!(4, 6)))
                 .patch(edit_channel.layer(ratelimit!(3, 10)))
                 .delete(delete_channel.layer(ratelimit!(3, 10))),
+        )
+        .route(
+            "/channels/:channel_id/typing",
+            put(start_typing.layer(ratelimit!(5, 10))).delete(stop_typing.layer(ratelimit!(5, 10))),
         )
 }
