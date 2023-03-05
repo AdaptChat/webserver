@@ -148,11 +148,19 @@ pub async fn edit_user(
         *avatar = upload_user_avatar(id, avatar).await?;
     }
 
-    get_pool()
-        .edit_user(id, payload)
-        .await
-        .map(Response::ok)
-        .map_err(Response::from)
+    let (before, after) = get_pool().edit_user(id, payload).await?;
+
+    #[cfg(feature = "ws")]
+    amqp::publish_user_event(
+        id,
+        OutboundMessage::UserUpdate {
+            before,
+            after: after.clone(),
+        },
+    )
+    .await?;
+
+    Ok(Response::ok(after))
 }
 
 /// Delete User
@@ -193,6 +201,10 @@ pub async fn delete_user(
     }
 
     db.delete_user(id).await?;
+
+    #[cfg(feature = "ws")]
+    amqp::publish_user_event(id, OutboundMessage::UserDelete { user_id: id }).await?;
+
     Ok(StatusCode::NO_CONTENT)
 }
 
