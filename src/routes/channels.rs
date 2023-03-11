@@ -112,6 +112,12 @@ pub async fn create_dm_channel(
             ref recipient_ids,
         } => {
             validate_channel_name(name)?;
+            if recipient_ids.len() >= 20 {
+                return Err(Response::from(Error::InvalidField {
+                    field: "recipient_ids".to_string(),
+                    message: "Group DMs cannot have more than 20 recipients".to_string(),
+                }));
+            }
 
             // TODO: this can be done in bulk
             for &recipient_id in recipient_ids {
