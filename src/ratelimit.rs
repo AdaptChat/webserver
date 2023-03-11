@@ -59,7 +59,7 @@ impl<S> Ratelimit<S> {
     }
 
     #[allow(clippy::cast_lossless)]
-    fn handle_ratelimit(&mut self, ip: IpAddr) -> Result<(), AxumResponse> {
+    fn handle_ratelimit(&mut self, ip: IpAddr) -> Result<u16, AxumResponse> {
         let mut bucket = self
             .buckets
             .entry(ip)
@@ -78,10 +78,7 @@ impl<S> Ratelimit<S> {
 
             let headers = response.headers_mut();
             Self::insert_headers(self.rate, self.per, headers);
-            headers.insert(
-                "X-RateLimit-Remaining",
-                bucket.count.to_string().parse().unwrap(),
-            );
+            headers.insert("X-RateLimit-Remaining", "0".parse().unwrap());
             headers.insert(
                 "Retry-After",
                 retry_after.as_secs_f32().to_string().parse().unwrap(),
@@ -96,7 +93,7 @@ impl<S> Ratelimit<S> {
             bucket.reset = Instant::now() + Duration::from_secs(self.per as u64);
         }
 
-        Ok(())
+        Ok(bucket.count)
     }
 }
 
@@ -116,7 +113,7 @@ where
 
     fn call(&mut self, req: Request<Body>) -> Self::Future {
         let Some(ip) = get_ip(&req) else {
-            return Box::pin(async move {
+            return Box::pin(async {
                 Ok(Response::from(Error::MalformedIp {
                     message: String::from(
                         "Could not resolve an IP address from the request. \
@@ -128,11 +125,10 @@ where
         };
 
         match self.handle_ratelimit(ip) {
-            Ok(_) => {
+            Ok(count) => {
                 let clone = self.inner.clone();
                 let mut inner = std::mem::replace(&mut self.inner, clone);
                 let (rate, per) = (self.rate, self.per);
-                let count = self.buckets.get(&ip).map_or(rate, |b| b.value().count);
 
                 Box::pin(async move {
                     let mut result = inner.call(req).await?;

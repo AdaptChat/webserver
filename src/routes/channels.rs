@@ -14,9 +14,13 @@ use axum::{
     Router,
 };
 use essence::{
-    db::{get_pool, ChannelDbExt, GuildDbExt},
-    http::channel::{CreateGuildChannelInfo, CreateGuildChannelPayload, EditChannelPayload},
-    models::{Channel, ChannelType, GuildChannel, ModelType, Permissions},
+    db::{get_pool, ChannelDbExt, GuildDbExt, UserDbExt},
+    error::UserInteractionType,
+    http::channel::{
+        CreateDmChannelPayload, CreateGuildChannelInfo, CreateGuildChannelPayload,
+        EditChannelPayload,
+    },
+    models::{Channel, ChannelType, DmChannel, GuildChannel, ModelType, Permissions},
     snowflake::generate_snowflake,
     utoipa, Error, Maybe, NotFoundExt,
 };
@@ -50,6 +54,114 @@ fn validate_channel_topic(topic: &str) -> essence::Result<()> {
     }
 
     Ok(())
+}
+
+/// Get DM Channels
+///
+/// Fetches all DM and group DM channels that the current user is a part of.
+#[utoipa::path(
+    get,
+    path = "/users/me/channels",
+    responses(
+        (status = OK, description = "DM channels were successfully fetched", body = Vec<DmChannel>),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+    ),
+    security(("token" = [])),
+)]
+pub async fn get_dm_channels(Auth(user_id, _): Auth) -> RouteResult<Vec<DmChannel>> {
+    Ok(Response::ok(
+        get_pool().fetch_all_dm_channels_for_user(user_id).await?,
+    ))
+}
+
+/// Open DM Channel / Create Group DM Channel
+///
+/// Opens a DM channel with the given user, or creates a group DM channel with the given users.
+///
+/// # For standard DM channels
+/// You may only open DM channels with users that are your friends, share a mutual guild, and
+/// do not have you blocked. If a DM channel already exists, the existing channel is returned.
+///
+/// # For group DM channels
+/// You may only create group DM channels with users that are your friends and do not have you
+/// blocked.
+#[utoipa::path(
+    post,
+    path = "/users/me/channels",
+    request_body = CreateDmChannelPayload,
+    responses(
+        (status = CREATED, description = "Channel was successfully created", body = DmChannel),
+        (status = BAD_REQUEST, description = "Invalid payload", body = Error),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = NOT_FOUND, description = "User not found", body = Error),
+    ),
+    security(("token" = [])),
+)]
+pub async fn create_dm_channel(
+    Auth(user_id, _): Auth,
+    Json(payload): Json<CreateDmChannelPayload>,
+) -> RouteResult<DmChannel> {
+    let mut db = get_pool();
+    match payload {
+        CreateDmChannelPayload::Dm { recipient_id } => {
+            db.assert_user_can_interact_with(user_id, recipient_id, UserInteractionType::Dm)
+                .await?;
+        }
+        CreateDmChannelPayload::Group {
+            ref name,
+            ref recipient_ids,
+        } => {
+            validate_channel_name(name)?;
+
+            // TODO: this can be done in bulk
+            for &recipient_id in recipient_ids {
+                db.assert_user_can_interact_with(
+                    user_id,
+                    recipient_id,
+                    UserInteractionType::GroupDm,
+                )
+                .await?;
+            }
+        }
+    }
+
+    let channel_id = generate_snowflake(ModelType::Channel, 0); // TODO: node ID
+    let channel = db.create_dm_channel(user_id, channel_id, payload).await?;
+
+    #[cfg(feature = "ws")]
+    amqp::publish_user_event(
+        user_id,
+        OutboundMessage::ChannelCreate {
+            channel: Channel::Dm(channel.clone()),
+        },
+    )
+    .await?;
+
+    Ok(Response::created(channel))
+}
+
+/// Get Guild Channels
+///
+/// Returns a list of all channels in the guild.
+#[utoipa::path(
+    get,
+    path = "/guilds/{guild_id}/channels",
+    responses(
+        (status = OK, description = "Array of guild channels", body = [GuildChannel]),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = NOT_FOUND, description = "Guild not found", body = Error),
+    ),
+    security(("token" = [])),
+)]
+pub async fn get_guild_channels(
+    Auth(user_id, _): Auth,
+    Path(guild_id): Path<u64>,
+) -> RouteResult<Vec<GuildChannel>> {
+    let db = get_pool();
+    db.assert_invoker_in_guild(guild_id, user_id).await?;
+
+    let channels = db.fetch_all_channels_in_guild(guild_id).await?;
+    Ok(Response::ok(channels))
 }
 
 /// Create Guild Channel
@@ -107,37 +219,13 @@ pub async fn create_guild_channel(
     #[cfg(feature = "ws")]
     amqp::publish_guild_event(
         guild_id,
-        OutboundMessage::GuildChannelCreate {
-            channel: channel.clone(),
+        OutboundMessage::ChannelCreate {
+            channel: Channel::Guild(channel.clone()),
         },
     )
     .await?;
 
     Ok(Response::created(channel))
-}
-
-/// Get Guild Channels
-///
-/// Returns a list of all channels in the guild.
-#[utoipa::path(
-    get,
-    path = "/guilds/{guild_id}/channels",
-    responses(
-        (status = OK, description = "Array of guild channels", body = [GuildChannel]),
-        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
-        (status = NOT_FOUND, description = "Guild not found", body = Error),
-    ),
-    security(("token" = [])),
-)]
-pub async fn get_guild_channels(
-    Auth(user_id, _): Auth,
-    Path(guild_id): Path<u64>,
-) -> RouteResult<Vec<GuildChannel>> {
-    let db = get_pool();
-    db.assert_invoker_in_guild(guild_id, user_id).await?;
-
-    let channels = db.fetch_all_channels_in_guild(guild_id).await?;
-    Ok(Response::ok(channels))
 }
 
 /// Get Channel
@@ -385,6 +473,11 @@ pub fn router() -> Router {
             "/guilds/:guild_id/channels",
             get(get_guild_channels.layer(ratelimit!(3, 6)))
                 .post(create_guild_channel.layer(ratelimit!(3, 10))),
+        )
+        .route(
+            "/users/me/channels",
+            get(get_dm_channels.layer(ratelimit!(3, 6)))
+                .post(create_dm_channel.layer(ratelimit!(3, 10))),
         )
         .route(
             "/channels/:channel_id",

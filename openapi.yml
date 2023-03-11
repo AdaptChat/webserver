@@ -2012,6 +2012,85 @@ paths:
       deprecated: false
       security:
       - token: []
+  /users/me/channels:
+    get:
+      tags:
+      - channels
+      summary: Get DM Channels
+      description: |-
+        Get DM Channels
+
+        Fetches all DM and group DM channels that the current user is a part of.
+      operationId: get_dm_channels
+      responses:
+        '200':
+          description: DM channels were successfully fetched
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DmChannel'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+    post:
+      tags:
+      - channels
+      summary: Open DM Channel / Create Group DM Channel
+      description: |-
+        Open DM Channel / Create Group DM Channel
+
+        Opens a DM channel with the given user, or creates a group DM channel with the given users.
+
+        # For standard DM channels
+        You may only open DM channels with users that are your friends, share a mutual guild, and
+        do not have you blocked. If a DM channel already exists, the existing channel is returned.
+
+        # For group DM channels
+        You may only create group DM channels with users that are your friends and do not have you
+        blocked.
+      operationId: create_dm_channel
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDmChannelPayload'
+        required: true
+      responses:
+        '201':
+          description: Channel was successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DmChannel'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
   /users/{user_id}:
     get:
       tags:
@@ -2120,7 +2199,13 @@ components:
       allOf:
       - $ref: '#/components/schemas/User'
       - type: object
+        required:
+        - dm_privacy
+        - group_dm_privacy
+        - friend_request_privacy
         properties:
+          dm_privacy:
+            $ref: '#/components/schemas/PrivacyConfiguration'
           email:
             type: string
             format: email
@@ -2128,9 +2213,52 @@ components:
               The associated email of the client's account.
 
               If the client is a bot, this is `None`.
+          friend_request_privacy:
+            $ref: '#/components/schemas/PrivacyConfiguration'
+          group_dm_privacy:
+            $ref: '#/components/schemas/PrivacyConfiguration'
       description: |-
         Represents user info about the client. This has other information that is not available to the
         public, such as emails, guilds, and relationships (friends and blocked users).
+    CreateDmChannelPayload:
+      oneOf:
+      - type: object
+        description: A standard DM channel with a single recipient.
+        required:
+        - recipient_id
+        - type
+        properties:
+          recipient_id:
+            type: integer
+            format: int64
+            description: The ID of the recipient to add to the DM with.
+          type:
+            type: string
+            enum:
+            - dm
+      - type: object
+        description: A group DM channel with multiple recipients.
+        required:
+        - name
+        - recipient_ids
+        - type
+        properties:
+          name:
+            type: string
+            description: The name of the group DM.
+          recipient_ids:
+            type: array
+            items:
+              type: integer
+              format: int64
+            description: A list of recipient IDs to initially add to the group DM.
+          type:
+            type: string
+            enum:
+            - group
+      description: The request body sent to create a new DM or group channel.
+      discriminator:
+        propertyName: type
     CreateGuildChannelInfo:
       oneOf:
       - type: object
@@ -3003,6 +3131,47 @@ components:
             enum:
             - cannot_friend_bots
       - type: object
+        description: |-
+          The user you are trying to interact with (e.g. add as a friend, open DMs, etc.) has privacy
+          settings that prevent you from doing so.
+        required:
+        - interaction_type
+        - target_id
+        - message
+        - type
+        properties:
+          interaction_type:
+            $ref: '#/components/schemas/UserInteractionType'
+          message:
+            type: string
+            description: The error message.
+          target_id:
+            type: integer
+            format: int64
+            description: The ID of the user you are attempting to interact with.
+          type:
+            type: string
+            enum:
+            - user_interaction_disallowed
+      - type: object
+        description: The user has blocked you, so you cannot interact with them.
+        required:
+        - target_id
+        - message
+        - type
+        properties:
+          message:
+            type: string
+            description: The error message.
+          target_id:
+            type: integer
+            format: int64
+            description: The ID of the user that blocked you.
+          type:
+            type: string
+            enum:
+            - blocked_by_user
+      - type: object
         description: Something was already taken, e.g. a username or email.
         required:
         - what
@@ -3232,6 +3401,9 @@ components:
       description: Represents the type along with type-specific info of a guild channel.
       discriminator:
         propertyName: type
+    GuildFlags:
+      type: integer
+      format: int32
     GuildFolder:
       type: object
       description: Represents a folder that contains a collection of guilds. This is only shown in the client's UI.
@@ -3364,6 +3536,7 @@ components:
           description: The user ID of the logged in user.
     MalformedBodyErrorType:
       type: string
+      description: The categorization of why the body is malformed.
       enum:
       - invalid_content_type
       - invalid_utf8
@@ -3471,6 +3644,9 @@ components:
       - center
       - right
       - inline
+    MessageFlags:
+      type: integer
+      format: int32
     MessageInfo:
       oneOf:
       - type: object
@@ -3616,6 +3792,12 @@ components:
           $ref: '#/components/schemas/Permissions'
         deny:
           $ref: '#/components/schemas/Permissions'
+    Permissions:
+      type: integer
+      format: int64
+    PrivacyConfiguration:
+      type: integer
+      format: int32
     Relationship:
       type: object
       description: Represents a relationship that a user has with another user.
@@ -3677,6 +3859,23 @@ components:
             The backend will try its best to keep all role positions unique, but on the event two
             collide due to something such as a data race, then the true position of these roles will
             not be predictable, and will likely be in the order of model creation.
+    RoleFlags:
+      type: integer
+      format: int32
+    SendFriendRequestPayload:
+      type: object
+      description: Payload sent when requesting to add a user as a friend.
+      required:
+      - username
+      - discriminator
+      properties:
+        discriminator:
+          type: integer
+          format: int32
+          description: The discriminator of the user.
+        username:
+          type: string
+          description: The username of the user to add as a friend.
     TextBasedGuildChannelInfo:
       type: object
       description: Represents common information found in text-based guild channels.
@@ -3744,9 +3943,16 @@ components:
         username:
           type: string
           description: The username of the user.
-    bitflags:
+    UserFlags:
       type: integer
       format: int32
+    UserInteractionType:
+      type: string
+      description: The type of user interaction that was disallowed.
+      enum:
+      - dm
+      - group_dm
+      - friend_request
   securitySchemes:
     token:
       type: apiKey
