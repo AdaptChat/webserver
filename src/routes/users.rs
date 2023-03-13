@@ -274,7 +274,7 @@ async fn publish_relationship_events(
     Ok(())
 }
 
-/// Send Friend Requests
+/// Send Friend Request
 ///
 /// Requests to add a user as a friend by their username and discriminator.
 #[utoipa::path(
