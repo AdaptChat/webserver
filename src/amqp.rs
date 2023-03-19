@@ -128,9 +128,12 @@ pub async fn publish<T: Encode + Send>(
     Ok(())
 }
 
-/// Sends a guild-related event to the amqp server.
-pub async fn publish_guild_event<T: Encode + Send>(guild_id: u64, event: T) -> essence::Result<()> {
-    publish(&guild_id.to_string(), true, "all", event).await
+/// Sends a guild-related or DM channel-related event to the amqp server.
+pub async fn publish_bulk_event<T: Encode + Send>(
+    exchange_id: u64,
+    event: T,
+) -> essence::Result<()> {
+    publish(&exchange_id.to_string(), true, "all", event).await
 }
 
 /// Sends a user-related event to the amqp server.
@@ -138,15 +141,14 @@ pub async fn publish_user_event<T: Encode + Send>(user_id: u64, event: T) -> ess
     publish("events", false, &user_id.to_string(), event).await
 }
 
-/// Sends a guild-related event if `guild_id` is `Some`, otherwise fallsback to a user-related
-/// event.
+/// Sends a bulk event if `exchange_id` is `Some`, otherwise fallsback to a user-related event.
 pub async fn publish_event<T: Encode + Send>(
-    guild_id: Option<u64>,
+    exchange_id: Option<u64>,
     user_id: u64,
     event: T,
 ) -> essence::Result<()> {
-    if let Some(guild_id) = guild_id {
-        publish_guild_event(guild_id, event).await
+    if let Some(exchange_id) = exchange_id {
+        publish_bulk_event(exchange_id, event).await
     } else {
         publish_user_event(user_id, event).await
     }

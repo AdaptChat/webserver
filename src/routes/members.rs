@@ -286,7 +286,7 @@ pub async fn leave_guild(Auth(user_id, _): Auth, Path(guild_id): Path<u64>) -> N
                 info: MemberRemoveInfo::Leave,
             },
         );
-        let guild_event = amqp::publish_guild_event(
+        let guild_event = amqp::publish_bulk_event(
             guild_id,
             OutboundMessage::MemberRemove {
                 guild_id,

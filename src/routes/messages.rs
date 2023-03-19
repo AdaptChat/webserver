@@ -267,9 +267,8 @@ pub async fn edit_message(
         .await?;
 
     #[cfg(feature = "ws")]
-    amqp::publish_event(
-        guild_id,
-        user_id,
+    amqp::publish_bulk_event(
+        guild_id.unwrap_or(channel_id),
         OutboundMessage::MessageUpdate {
             before,
             after: after.clone(),

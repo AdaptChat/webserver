@@ -229,7 +229,7 @@ pub async fn delete_guild(
     db.delete_guild(guild_id).await?;
 
     #[cfg(feature = "ws")]
-    amqp::publish_guild_event(
+    amqp::publish_bulk_event(
         guild_id,
         OutboundMessage::GuildRemove {
             guild_id,

@@ -172,7 +172,7 @@ pub async fn use_invite(
             let user_id = member.user_id();
             let guild_id = member.guild_id;
 
-            let guild_event = amqp::publish_guild_event(
+            let guild_event = amqp::publish_bulk_event(
                 guild_id,
                 OutboundMessage::MemberJoin {
                     member,

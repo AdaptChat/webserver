@@ -223,7 +223,7 @@ pub async fn create_guild_channel(
         .await?;
 
     #[cfg(feature = "ws")]
-    amqp::publish_guild_event(
+    amqp::publish_bulk_event(
         guild_id,
         OutboundMessage::ChannelCreate {
             channel: Channel::Guild(channel.clone()),
