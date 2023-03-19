@@ -10,7 +10,7 @@ use deadpool_lapin::{
     },
     Object, Pool, Runtime,
 };
-use essence::Error;
+use essence::{models::ModelType, snowflake::SnowflakeReader, Error};
 use std::sync::OnceLock;
 use tokio::sync::RwLock;
 
@@ -51,6 +51,7 @@ pub async fn get_pool() -> Object {
 async fn _publish<'a>(
     channel: &'a Channel,
     exchange: &str,
+    kind: ExchangeKind,
     auto_delete: bool,
     routing_key: &str,
     payload: &[u8],
@@ -58,7 +59,7 @@ async fn _publish<'a>(
     channel
         .exchange_declare(
             exchange.as_ref(),
-            ExchangeKind::Topic,
+            kind,
             ExchangeDeclareOptions {
                 auto_delete,
                 ..Default::default()
@@ -81,6 +82,7 @@ async fn _publish<'a>(
 /// Sends a message to the amqp server.
 pub async fn publish<T: Encode + Send>(
     exchange: &str,
+    kind: ExchangeKind,
     auto_delete: bool,
     routing_key: &str,
     data: T,
@@ -98,7 +100,15 @@ pub async fn publish<T: Encode + Send>(
 
     macro_rules! publish {
         ($channel:expr) => {
-            _publish($channel, exchange, auto_delete, routing_key, &bytes).await
+            _publish(
+                $channel,
+                exchange,
+                kind.clone(),
+                auto_delete,
+                routing_key,
+                &bytes,
+            )
+            .await
         };
     }
 
@@ -133,12 +143,24 @@ pub async fn publish_bulk_event<T: Encode + Send>(
     exchange_id: u64,
     event: T,
 ) -> essence::Result<()> {
-    publish(&exchange_id.to_string(), true, "all", event).await
+    let kind = match SnowflakeReader::new(exchange_id).model_type() {
+        ModelType::Guild => ExchangeKind::Topic,
+        ModelType::Channel => ExchangeKind::Fanout,
+        _ => panic!("invalid exchange id: {exchange_id}"),
+    };
+    publish(&exchange_id.to_string(), kind, true, "all", event).await
 }
 
 /// Sends a user-related event to the amqp server.
 pub async fn publish_user_event<T: Encode + Send>(user_id: u64, event: T) -> essence::Result<()> {
-    publish("events", false, &user_id.to_string(), event).await
+    publish(
+        "events",
+        ExchangeKind::Topic,
+        false,
+        &user_id.to_string(),
+        event,
+    )
+    .await
 }
 
 /// Sends a bulk event if `exchange_id` is `Some`, otherwise fallsback to a user-related event.
