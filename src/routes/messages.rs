@@ -212,9 +212,8 @@ pub async fn create_message(
             db.fetch_user_by_id(user_id).await?.map(MemberOrUser::User)
         };
 
-        amqp::publish_event(
-            guild_id,
-            user_id,
+        amqp::publish_bulk_event(
+            guild_id.unwrap_or(channel_id),
             OutboundMessage::MessageCreate {
                 message: message.clone(),
                 nonce,
@@ -337,9 +336,8 @@ pub async fn delete_message(
     get_pool().delete_message(channel_id, message_id).await?;
 
     #[cfg(feature = "ws")]
-    amqp::publish_event(
-        guild_id,
-        user_id,
+    amqp::publish_bulk_event(
+        guild_id.unwrap_or(channel_id),
         OutboundMessage::MessageDelete { message_id },
     )
     .await?;

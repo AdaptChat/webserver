@@ -24,6 +24,7 @@ use essence::{
     snowflake::generate_snowflake,
     utoipa, Error, Maybe, NotFoundExt,
 };
+use futures_util::future::TryJoinAll;
 
 #[inline]
 fn validate_channel_name(name: &str) -> essence::Result<()> {
@@ -99,17 +100,18 @@ pub async fn get_dm_channels(Auth(user_id, _): Auth) -> RouteResult<Vec<DmChanne
 )]
 pub async fn create_dm_channel(
     Auth(user_id, _): Auth,
-    Json(payload): Json<CreateDmChannelPayload>,
+    Json(mut payload): Json<CreateDmChannelPayload>,
 ) -> RouteResult<DmChannel> {
     let mut db = get_pool();
-    match payload {
+    let recipients = match payload {
         CreateDmChannelPayload::Dm { recipient_id } => {
             db.assert_user_can_interact_with(user_id, recipient_id, UserInteractionType::Dm)
                 .await?;
+            vec![user_id, recipient_id]
         }
         CreateDmChannelPayload::Group {
             ref name,
-            ref recipient_ids,
+            ref mut recipient_ids,
         } => {
             validate_channel_name(name)?;
             if recipient_ids.len() >= 20 {
@@ -120,7 +122,10 @@ pub async fn create_dm_channel(
             }
 
             // TODO: this can be done in bulk
-            for &recipient_id in recipient_ids {
+            for &recipient_id in recipient_ids.iter() {
+                if recipient_id == user_id {
+                    continue;
+                }
                 db.assert_user_can_interact_with(
                     user_id,
                     recipient_id,
@@ -128,20 +133,30 @@ pub async fn create_dm_channel(
                 )
                 .await?;
             }
+
+            if !recipient_ids.contains(&user_id) {
+                recipient_ids.push(user_id);
+            }
+            recipient_ids.clone()
         }
-    }
+    };
 
     let channel_id = generate_snowflake(ModelType::Channel, 0); // TODO: node ID
     let channel = db.create_dm_channel(user_id, channel_id, payload).await?;
 
     #[cfg(feature = "ws")]
-    amqp::publish_user_event(
-        user_id,
-        OutboundMessage::ChannelCreate {
-            channel: Channel::Dm(channel.clone()),
-        },
-    )
-    .await?;
+    recipients
+        .into_iter()
+        .map(|recipient| {
+            amqp::publish_user_event(
+                recipient,
+                OutboundMessage::ChannelCreate {
+                    channel: Channel::Dm(channel.clone()),
+                },
+            )
+        })
+        .collect::<TryJoinAll<_>>()
+        .await?;
 
     Ok(Response::created(channel))
 }
@@ -316,9 +331,8 @@ pub async fn edit_channel(
     let (before, channel) = db.edit_channel(channel_id, payload).await?;
 
     #[cfg(feature = "ws")]
-    amqp::publish_event(
-        guild_id,
-        user_id,
+    amqp::publish_bulk_event(
+        guild_id.unwrap_or(channel_id),
         OutboundMessage::ChannelUpdate {
             before,
             after: channel.clone(),
@@ -373,9 +387,8 @@ pub async fn delete_channel(
     db.delete_channel(channel_id).await?;
 
     #[cfg(feature = "ws")]
-    amqp::publish_event(
-        guild_id,
-        user_id,
+    amqp::publish_bulk_event(
+        guild_id.unwrap_or(channel_id),
         OutboundMessage::ChannelDelete { channel_id },
     )
     .await?;
@@ -407,7 +420,7 @@ async fn send_typing(
     }
 
     #[cfg(feature = "ws")]
-    amqp::publish_event(guild_id, user_id, outbound).await?;
+    amqp::publish_bulk_event(guild_id.unwrap_or(channel_id), outbound).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
