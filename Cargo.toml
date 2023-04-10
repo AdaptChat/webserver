@@ -30,7 +30,7 @@ serde = { version = "1", features = ["derive"] }
 simd-json = "0.7"
 tokio = { version = "1", features = ["rt-multi-thread", "net", "time", "macros", "sync", "signal", "parking_lot"] }
 tower = { version = "0.4", features = ["buffer"] }
-tower-http = { version = "0.3", features = ["cors"] }
+tower-http = { version = "0.4", features = ["cors"] }
 utoipa-swagger-ui = { version = "3.0.2", features = ["axum"] }
 
 [features]

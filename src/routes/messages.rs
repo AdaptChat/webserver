@@ -31,7 +31,7 @@ async fn maybe_assert_permissions(
         .inspect_channel(channel_id)
         .await?
         .ok_or_not_found("channel", format!("Channel with ID {channel_id} not found"))?
-        .0;
+        .guild_id;
 
     if let Some(guild_id) = guild_id {
         db.assert_member_has_permissions(guild_id, user_id, Some(channel_id), permissions)
@@ -305,7 +305,7 @@ pub async fn delete_message(
         .inspect_channel(channel_id)
         .await?
         .ok_or_not_found("channel", format!("Channel with ID {channel_id} not found"))?
-        .0;
+        .guild_id;
 
     if let Some(guild_id) = guild_id {
         let perms = db

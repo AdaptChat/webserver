@@ -34,13 +34,12 @@ use utoipa_swagger_ui::SwaggerUi;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    essence::db::connect(dotenv!(
-        "DATABASE_URL",
-        "missing DATABASE_URL environment variable"
-    ))
+    essence::connect(
+        dotenv!("DATABASE_URL", "missing DATABASE_URL environment variable"),
+        dotenv!("REDIS_URL", "missing REDIS_URL environment variable"),
+    )
     .await?;
     essence::auth::configure_hasher(include_bytes!("../secret.key")).await;
-    essence::cache::setup();
     cdn::setup()?;
     #[cfg(feature = "ws")]
     amqp::connect().await?;

@@ -13,6 +13,7 @@ use axum::{
     routing::{get, put},
     Router,
 };
+use essence::cache::ChannelInspection;
 use essence::{
     db::{get_pool, ChannelDbExt, GuildDbExt, UserDbExt},
     error::UserInteractionType,
@@ -272,7 +273,7 @@ pub async fn get_channel(
         .inspect_channel(channel_id)
         .await?
         .ok_or_not_found("channel", format!("Channel with ID {channel_id} not found"))?
-        .0
+        .guild_id
     {
         db.assert_invoker_in_guild(guild_id, user_id).await?;
     }
@@ -311,7 +312,11 @@ pub async fn edit_channel(
     }
 
     let mut db = get_pool();
-    let (guild_id, _, kind) = db
+    let ChannelInspection {
+        guild_id,
+        channel_type: kind,
+        ..
+    } = db
         .inspect_channel(channel_id)
         .await?
         .ok_or_not_found("channel", format!("Channel with ID {channel_id} not found"))?;
@@ -364,7 +369,11 @@ pub async fn delete_channel(
     Path(channel_id): Path<u64>,
 ) -> NoContentResult {
     let mut db = get_pool();
-    let (guild_id, _, kind) = db
+    let ChannelInspection {
+        guild_id,
+        channel_type: kind,
+        ..
+    } = db
         .inspect_channel(channel_id)
         .await?
         .ok_or_not_found("channel", format!("Channel with ID {channel_id} not found"))?;
@@ -402,7 +411,11 @@ async fn send_typing(
     #[cfg(feature = "ws")] outbound: OutboundMessage,
 ) -> NoContentResult {
     let db = get_pool();
-    let (guild_id, _, kind) = db
+    let ChannelInspection {
+        guild_id,
+        channel_type: kind,
+        ..
+    } = db
         .inspect_channel(channel_id)
         .await?
         .ok_or_not_found("channel", format!("Channel with ID {channel_id} not found"))?;
