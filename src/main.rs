@@ -64,6 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .merge(routes::auth::router())
         .merge(routes::channels::router())
         .merge(routes::guilds::router())
+        .merge(routes::internal::router())
         .merge(routes::invites::router())
         .merge(routes::members::router())
         .merge(routes::messages::router())
