@@ -56,6 +56,8 @@ use essence::{
         messages::create_message,
         messages::edit_message,
         messages::delete_message,
+        messages::pin_message,
+        messages::unpin_message,
     ),
     components(schemas(
         http::auth::LoginRequest,

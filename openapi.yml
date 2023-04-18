@@ -460,6 +460,102 @@ paths:
       deprecated: false
       security:
       - token: []
+  /channels/{channel_id}/messages/{message_id}/pin:
+    put:
+      tags:
+      - messages
+      summary: Pin Message
+      description: |-
+        Pin Message
+
+        Pins a message to its given channel. You must have the `PIN_MESSAGES` permission in the
+        channel, or be in a DM-type channel. This endpoint is idempotent.
+      operationId: pin_message
+      parameters:
+      - name: channel_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: message_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '204':
+          description: Message pinned
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel or message not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
+    delete:
+      tags:
+      - messages
+      summary: Unpin Message
+      description: |-
+        Unpin Message
+
+        Unpins a message from its given channel. You must have the `PIN_MESSAGES` permission in the
+        channel, or be in a DM-type channel. This endpoint is idempotent, so it may still return
+        success even if the message wasn't originally pinned.
+      operationId: unpin_message
+      parameters:
+      - name: channel_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: message_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '204':
+          description: Message unpinned
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel or message not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      deprecated: false
+      security:
+      - token: []
   /guilds:
     get:
       tags:
@@ -1738,9 +1834,9 @@ paths:
     post:
       tags:
       - users
-      summary: Send Friend Requests
+      summary: Send Friend Request
       description: |-
-        Send Friend Requests
+        Send Friend Request
 
         Requests to add a user as a friend by their username and discriminator.
       operationId: add_friend

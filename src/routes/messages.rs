@@ -10,13 +10,13 @@ use axum::{
     extract::{Path, Query},
     handler::Handler,
     http::StatusCode,
-    routing::get,
+    routing::{get, put},
     Router,
 };
 use essence::{
     db::{get_pool, ChannelDbExt, GuildDbExt, MemberDbExt, MessageDbExt, RoleDbExt, UserDbExt},
     http::message::{CreateMessagePayload, EditMessagePayload, MessageHistoryQuery},
-    models::{Embed, MemberOrUser, Message, ModelType, Permissions},
+    models::{Embed, MemberOrUser, Message, MessageFlags, MessageInfo, ModelType, Permissions},
     snowflake::generate_snowflake,
     utoipa, Error, Maybe, NotFoundExt,
 };
@@ -345,6 +345,131 @@ pub async fn delete_message(
     Ok(StatusCode::NO_CONTENT)
 }
 
+async fn modify_message_flags(
+    channel_id: u64,
+    message_id: u64,
+    user_id: u64,
+    permissions: Permissions,
+    enable: MessageFlags,
+    disable: MessageFlags,
+    system_message: Option<MessageInfo>,
+) -> essence::Result<()> {
+    let db = get_pool();
+    let guild_id = db
+        .inspect_channel(channel_id)
+        .await?
+        .ok_or_not_found("channel", format!("Channel with ID {channel_id} not found"))?
+        .guild_id;
+
+    if let Some(guild_id) = guild_id {
+        db.assert_member_has_permissions_with(
+            guild_id,
+            db.fetch_member_permissions(guild_id, user_id, Some(channel_id))
+                .await?,
+            permissions,
+        )
+        .await?;
+    }
+
+    let mut transaction = db.begin().await?;
+    transaction
+        .edit_message_flags(channel_id, message_id, enable, disable)
+        .await?;
+
+    if let Some(system_message) = system_message {
+        let system_message = transaction
+            .send_system_message(
+                channel_id,
+                generate_snowflake(ModelType::Message, 0), // TODO: node id
+                system_message,
+            )
+            .await?;
+
+        #[cfg(feature = "ws")]
+        amqp::publish_bulk_event(
+            guild_id.unwrap_or(channel_id),
+            OutboundMessage::MessageCreate {
+                message: system_message,
+                nonce: None,
+            },
+        )
+        .await?;
+    }
+
+    transaction.commit().await?;
+    Ok(())
+}
+
+/// Pin Message
+///
+/// Pins a message to its given channel. You must have the `PIN_MESSAGES` permission in the
+/// channel, or be in a DM-type channel. This endpoint is idempotent.
+#[utoipa::path(
+    put,
+    path = "/channels/{channel_id}/messages/{message_id}/pin",
+    responses(
+        (status = NO_CONTENT, description = "Message pinned"),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = FORBIDDEN, description = "Missing permissions", body = Error),
+        (status = NOT_FOUND, description = "Channel or message not found", body = Error),
+    ),
+    security(("token" = [])),
+)]
+async fn pin_message(
+    Auth(user_id, _): Auth,
+    Path((channel_id, message_id)): Path<(u64, u64)>,
+) -> NoContentResult {
+    modify_message_flags(
+        channel_id,
+        message_id,
+        user_id,
+        Permissions::PIN_MESSAGES,
+        MessageFlags::PINNED,
+        MessageFlags::empty(),
+        Some(MessageInfo::Pin {
+            pinned_message_id: message_id,
+            pinned_by: user_id,
+        }),
+    )
+    .await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Unpin Message
+///
+/// Unpins a message from its given channel. You must have the `PIN_MESSAGES` permission in the
+/// channel, or be in a DM-type channel. This endpoint is idempotent, so it may still return
+/// success even if the message wasn't originally pinned.
+#[utoipa::path(
+    delete,
+    path = "/channels/{channel_id}/messages/{message_id}/pin",
+    responses(
+        (status = NO_CONTENT, description = "Message unpinned"),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = FORBIDDEN, description = "Missing permissions", body = Error),
+        (status = NOT_FOUND, description = "Channel or message not found", body = Error),
+    ),
+    security(("token" = [])),
+)]
+async fn unpin_message(
+    Auth(user_id, _): Auth,
+    Path((channel_id, message_id)): Path<(u64, u64)>,
+) -> NoContentResult {
+    modify_message_flags(
+        channel_id,
+        message_id,
+        user_id,
+        Permissions::PIN_MESSAGES,
+        MessageFlags::empty(),
+        MessageFlags::PINNED,
+        None,
+    )
+    .await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
 #[must_use]
 pub fn router() -> Router {
     Router::new()
@@ -358,5 +483,9 @@ pub fn router() -> Router {
             get(get_message.layer(ratelimit!(5, 5)))
                 .patch(edit_message.layer(ratelimit!(5, 5)))
                 .delete(delete_message.layer(ratelimit!(5, 5))),
+        )
+        .route(
+            "/channels/:channel_id/messages/:message_id/pin",
+            put(pin_message.layer(ratelimit!(5, 5))).delete(unpin_message.layer(ratelimit!(5, 5))),
         )
 }
