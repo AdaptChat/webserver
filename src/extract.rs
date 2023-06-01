@@ -1,7 +1,10 @@
 use crate::Response;
 use axum::{
     body::{Bytes, HttpBody},
-    extract::{FromRequest, FromRequestParts},
+    extract::{
+        multipart::{MultipartError, MultipartRejection},
+        FromRequest, FromRequestParts, Multipart,
+    },
     http::{header, request::Parts, Request},
 };
 use bytes::Buf;
@@ -11,6 +14,28 @@ use essence::{
     models::UserFlags,
 };
 use serde::de::DeserializeOwned;
+
+pub trait MultipartIntoErrExt<T> {
+    fn multipart_into_err(self) -> Result<T, Error>;
+}
+
+impl<T> MultipartIntoErrExt<T> for Result<T, MultipartError> {
+    fn multipart_into_err(self) -> Result<T, Error> {
+        self.map_err(|e| Error::MalformedBody {
+            error_type: MalformedBodyErrorType::InvalidMultipart,
+            message: e.to_string(),
+        })
+    }
+}
+
+impl<T> MultipartIntoErrExt<T> for Result<T, MultipartRejection> {
+    fn multipart_into_err(self) -> Result<T, Error> {
+        self.map_err(|e| Error::MalformedBody {
+            error_type: MalformedBodyErrorType::InvalidMultipart,
+            message: e.to_string(),
+        })
+    }
+}
 
 /// Extracts authentication information (the token) from request headers.
 #[derive(Copy, Clone, Debug)]
@@ -108,5 +133,71 @@ where
                 message: err.to_string(),
             })
             .map_err(Response::from)
+    }
+}
+
+#[derive(Debug)]
+pub struct CreateMessageData<T>(pub T, pub Option<Multipart>);
+
+#[axum::async_trait]
+impl<T, B, S> FromRequest<S, B> for CreateMessageData<T>
+where
+    T: DeserializeOwned,
+    B: HttpBody + Send + 'static,
+    B::Data: Into<Bytes> + Send,
+    B::Error: Into<axum::BoxError>,
+    S: Send + Sync,
+{
+    type Rejection = Response<Error>;
+
+    async fn from_request(req: Request<B>, state: &S) -> Result<Self, Self::Rejection> {
+        if req
+            .headers()
+            .get(header::CONTENT_TYPE)
+            .is_some_and(|ct| ct.to_str().is_ok_and(|ct| ct == "application/json"))
+        {
+            let Json(json) = Json::from_request(req, state).await?;
+
+            return Ok(Self(json, None));
+        }
+
+        let mut multipart: Multipart = Multipart::from_request(req, state)
+            .await
+            .multipart_into_err()?;
+
+        let field = multipart
+            .next_field()
+            .await
+            .multipart_into_err()?
+            .ok_or_else(|| Error::MissingField {
+                field: "json".to_string(),
+                message: "`json` field is required when using multipart body".to_string(),
+            })?;
+
+        if let Some(name) = field.name() {
+            if name == "json" {
+                simd_json::from_reader(&field.bytes().await.multipart_into_err()?[..])
+                    .map_err(|err| {
+                        Error::MalformedBody {
+                            error_type: MalformedBodyErrorType::InvalidJson,
+                            message: err.to_string(),
+                        }
+                        .into()
+                    })
+                    .map(|json| Self(json, Some(multipart)))
+            } else {
+                Err(Error::InvalidField {
+                    field: name.to_string(),
+                    message: "the first field must be named `json`".to_string(),
+                }
+                .into())
+            }
+        } else {
+            Err(Error::MissingField {
+                field: "json".to_string(),
+                message: "`json` field is required when using multipart body".to_string(),
+            }
+            .into())
+        }
     }
 }

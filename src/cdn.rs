@@ -6,6 +6,7 @@ use reqwest::{
 };
 use serde::Deserialize;
 use std::sync::OnceLock;
+use uuid::Uuid;
 
 const CDN_URL: &str = dotenv!("CDN_URL", "missing CDN_URL environment variable");
 const CDN_AUTHORIZATION: &str = dotenv!(
@@ -16,6 +17,7 @@ static CLIENT: OnceLock<Client> = OnceLock::new();
 
 #[derive(Deserialize)]
 struct CdnUploadResponse {
+    id: Uuid,
     path: String,
 }
 
@@ -153,4 +155,11 @@ pub async fn upload_user_avatar(user_id: u64, image_data: &str) -> essence::Resu
     .path;
 
     Ok([CDN_URL, &url].concat())
+}
+
+/// Uploads an attachment to the CDN and returns the id.
+pub async fn upload_attachment(filename: String, bytes: Vec<u8>) -> essence::Result<Uuid> {
+    upload("/attachments", bytes, filename)
+        .await
+        .map(|resp| resp.id)
 }
