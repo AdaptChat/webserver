@@ -4,7 +4,7 @@ use reqwest::{
     multipart::{Form, Part},
     Client,
 };
-use serde::Deserialize;
+use serde::{de::DeserializeOwned, Deserialize};
 use std::sync::OnceLock;
 use uuid::Uuid;
 
@@ -15,11 +15,21 @@ const CDN_AUTHORIZATION: &str = dotenv!(
 );
 static CLIENT: OnceLock<Client> = OnceLock::new();
 
+trait CdnResponse: DeserializeOwned {}
+
 #[derive(Deserialize)]
-struct CdnUploadResponse {
+struct CdnAttachmentUploadResponse {
     id: Uuid,
+    // path: String,
+}
+
+#[derive(Deserialize)]
+struct CdnAvatarUploadResponse {
     path: String,
 }
+
+impl CdnResponse for CdnAttachmentUploadResponse {}
+impl CdnResponse for CdnAvatarUploadResponse {}
 
 fn humanize_size(mut len: usize) -> String {
     const SIZES: [&str; 6] = ["B", "kB", "MB", "GB", "TB", "PB"];
@@ -107,11 +117,11 @@ fn data_scheme_to_bytes(
     Ok((bytes, ext.to_string()))
 }
 
-async fn upload(
+async fn upload<T: CdnResponse>(
     endpoint: &str,
     bytes: Vec<u8>,
     filename: String,
-) -> essence::Result<CdnUploadResponse> {
+) -> essence::Result<T> {
     let response = get_client()
         .post([CDN_URL, endpoint].concat())
         .header("Authorization", ["Bearer ", CDN_AUTHORIZATION].concat())
@@ -146,7 +156,7 @@ async fn upload(
 pub async fn upload_user_avatar(user_id: u64, image_data: &str) -> essence::Result<String> {
     let (bytes, ext) = data_scheme_to_bytes(Some("avatar"), image_data, true, 4_000_000)?;
 
-    let url = upload(
+    let url = upload::<CdnAvatarUploadResponse>(
         &format!("/avatars/{user_id}"),
         bytes,
         format!("avatar.{ext}"),
@@ -159,7 +169,7 @@ pub async fn upload_user_avatar(user_id: u64, image_data: &str) -> essence::Resu
 
 /// Uploads an attachment to the CDN and returns the id.
 pub async fn upload_attachment(filename: String, bytes: Vec<u8>) -> essence::Result<Uuid> {
-    upload("/attachments", bytes, filename)
+    upload::<CdnAttachmentUploadResponse>("/attachments", bytes, filename)
         .await
         .map(|resp| resp.id)
 }
