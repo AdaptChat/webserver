@@ -6,9 +6,7 @@
     clippy::similar_names
 )]
 #![cfg_attr(not(feature = "ws"), allow(unused_variables, unused_imports))]
-#![feature(is_some_and)]
-#![feature(once_cell)]
-#![feature(never_type)]
+// #![feature(never_type)]
 #![feature(try_blocks)]
 
 #[macro_use]

@@ -176,7 +176,7 @@ where
 
         if let Some(name) = field.name() {
             if name == "json" {
-                simd_json::from_reader(&field.bytes().await.multipart_into_err()?[..])
+                simd_json::from_reader(field.bytes().await.multipart_into_err()?.reader())
                     .map_err(|err| {
                         Error::MalformedBody {
                             error_type: MalformedBodyErrorType::InvalidJson,

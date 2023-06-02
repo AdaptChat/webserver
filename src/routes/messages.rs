@@ -8,7 +8,7 @@ use crate::{
     Response,
 };
 use axum::{
-    extract::{Multipart, Path, Query},
+    extract::{Path, Query},
     handler::Handler,
     http::StatusCode,
     routing::{get, put},
