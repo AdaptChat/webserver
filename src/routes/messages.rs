@@ -192,40 +192,38 @@ pub async fn create_message(
     )
     .await?;
 
-    let attachment = {
-        if let Some(mut multipart) = multipart {
-            let field = multipart.next_field().await.multipart_into_err()?;
+    let attachment = if let Some(mut multipart) = multipart {
+        let field = multipart.next_field().await.multipart_into_err()?;
 
-            if let Some(field) = field {
-                let filename = field
-                    .file_name()
-                    .ok_or_else(|| Error::InvalidField {
-                        field: field.name().unwrap_or("unknown").to_string(),
-                        message: "Missing file name for field".to_string(),
-                    })?
-                    .to_string();
+        if let Some(field) = field {
+            let filename = field
+                .file_name()
+                .ok_or_else(|| Error::InvalidField {
+                    field: field.name().unwrap_or("unknown").to_string(),
+                    message: "missing file name for field".to_string(),
+                })?
+                .to_string();
 
-                let buffer = field.bytes().await.multipart_into_err()?;
-                let size = buffer.len();
+            let buffer = field.bytes().await.multipart_into_err()?;
+            let size = buffer.len();
 
-                let id = cdn::upload_attachment(filename.clone(), buffer.to_vec()).await?;
+            let id = cdn::upload_attachment(filename.clone(), buffer.to_vec()).await?;
 
-                Some(Attachment {
-                    id,
-                    filename,
-                    alt: None,
-                    size: size as u64,
-                })
-            } else {
-                return Err(Error::MissingField {
-                    field: "file".to_string(),
-                    message: "Missing attachment field".to_string(),
-                }
-                .into());
-            }
+            Some(Attachment {
+                id,
+                filename,
+                alt: None,
+                size: size as u64,
+            })
         } else {
-            None
+            return Err(Error::MissingField {
+                field: "file".to_string(),
+                message: "missing attachment field".to_string(),
+            }
+            .into());
         }
+    } else {
+        None
     };
 
     let mut db = get_pool();
@@ -238,7 +236,7 @@ pub async fn create_message(
     if let Some(attachment) = attachment {
         db.create_attachment(message_id, 0, attachment.clone())
             .await?; // FIXME: revision id
-        message.attachments = vec![attachment];
+        message.attachments.push(attachment);
     }
 
     #[cfg(feature = "ws")]

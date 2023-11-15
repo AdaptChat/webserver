@@ -2,9 +2,6 @@ openapi: 3.0.3
 info:
   title: Adapt REST API
   description: Public REST API for the Adapt chat platform
-  contact:
-    name: ''
-    email: ''
   license:
     name: AGPL-3.0
   version: 0.1.0
@@ -30,6 +27,7 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       responses:
         '200':
           description: Channel information
@@ -49,7 +47,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
     delete:
@@ -70,6 +67,7 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       responses:
         '204':
           description: Channel deleted
@@ -91,7 +89,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
     patch:
@@ -111,6 +108,7 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       requestBody:
         content:
           application/json:
@@ -148,7 +146,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
   /channels/{channel_id}/messages:
@@ -172,6 +169,8 @@ paths:
         schema:
           type: integer
           format: int64
+          nullable: true
+          minimum: 0
       - name: after
         in: query
         description: |-
@@ -181,6 +180,8 @@ paths:
         schema:
           type: integer
           format: int64
+          nullable: true
+          minimum: 0
       - name: limit
         in: query
         description: |-
@@ -190,6 +191,7 @@ paths:
         schema:
           type: integer
           format: int32
+          minimum: 0
       - name: user_id
         in: query
         description: If specified, only messages sent by the given user will be returned.
@@ -197,6 +199,8 @@ paths:
         schema:
           type: integer
           format: int64
+          nullable: true
+          minimum: 0
       - name: oldest_first
         in: query
         description: |-
@@ -214,6 +218,7 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       responses:
         '200':
           description: Array of message objects
@@ -247,7 +252,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
     post:
@@ -267,6 +271,7 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       requestBody:
         content:
           application/json:
@@ -298,7 +303,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
   /channels/{channel_id}/messages/{message_id}:
@@ -319,12 +323,14 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       - name: message_id
         in: path
         required: true
         schema:
           type: integer
           format: int64
+          minimum: 0
       responses:
         '200':
           description: Message object
@@ -350,7 +356,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
     delete:
@@ -373,12 +378,14 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       - name: message_id
         in: path
         required: true
         schema:
           type: integer
           format: int64
+          minimum: 0
       responses:
         '204':
           description: Message deleted
@@ -400,7 +407,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
     patch:
@@ -420,12 +426,14 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       - name: message_id
         in: path
         required: true
         schema:
           type: integer
           format: int64
+          minimum: 0
       requestBody:
         content:
           application/json:
@@ -457,7 +465,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
   /channels/{channel_id}/messages/{message_id}/pin:
@@ -478,12 +485,14 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       - name: message_id
         in: path
         required: true
         schema:
           type: integer
           format: int64
+          minimum: 0
       responses:
         '204':
           description: Message pinned
@@ -505,7 +514,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
     delete:
@@ -526,12 +534,14 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       - name: message_id
         in: path
         required: true
         schema:
           type: integer
           format: int64
+          minimum: 0
       responses:
         '204':
           description: Message unpinned
@@ -553,7 +563,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
   /guilds:
@@ -600,7 +609,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
     post:
@@ -631,7 +639,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
   /guilds/{guild_id}:
@@ -652,6 +659,7 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       responses:
         '200':
           description: Guild object
@@ -677,7 +685,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
     delete:
@@ -696,11 +703,14 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DeleteGuildPayload'
+              allOf:
+              - $ref: '#/components/schemas/DeleteGuildPayload'
+              nullable: true
         required: false
       responses:
         '204':
@@ -723,7 +733,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
     patch:
@@ -743,6 +752,7 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       requestBody:
         content:
           application/json:
@@ -780,7 +790,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
   /guilds/{guild_id}/channels:
@@ -800,6 +809,7 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       responses:
         '200':
           description: Array of guild channels
@@ -821,7 +831,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
     post:
@@ -841,6 +850,7 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       requestBody:
         content:
           application/json:
@@ -878,7 +888,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
   /guilds/{guild_id}/invites:
@@ -899,6 +908,7 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       responses:
         '200':
           description: List of invites
@@ -926,7 +936,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
     post:
@@ -946,6 +955,7 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       requestBody:
         content:
           application/json:
@@ -983,7 +993,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
   /guilds/{guild_id}/invites/{code}:
@@ -1004,6 +1013,7 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       - name: code
         in: path
         required: true
@@ -1030,7 +1040,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
   /guilds/{guild_id}/members:
@@ -1050,6 +1059,7 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       responses:
         '200':
           description: Array of member objects
@@ -1077,7 +1087,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
   /guilds/{guild_id}/members/me:
@@ -1098,6 +1107,7 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       responses:
         '200':
           description: Member object
@@ -1123,7 +1133,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
     delete:
@@ -1143,6 +1152,7 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       responses:
         '204':
           description: Success left the guild
@@ -1164,7 +1174,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
     patch:
@@ -1185,6 +1194,7 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       requestBody:
         content:
           application/json:
@@ -1216,7 +1226,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
   /guilds/{guild_id}/members/{member_id}:
@@ -1236,12 +1245,14 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       - name: member_id
         in: path
         required: true
         schema:
           type: integer
           format: int64
+          minimum: 0
       responses:
         '200':
           description: Member object
@@ -1267,7 +1278,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
     delete:
@@ -1287,12 +1297,14 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       - name: member_id
         in: path
         required: true
         schema:
           type: integer
           format: int64
+          minimum: 0
       responses:
         '204':
           description: Member was kicked
@@ -1317,7 +1329,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
     patch:
@@ -1340,12 +1351,14 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       - name: member_id
         in: path
         required: true
         schema:
           type: integer
           format: int64
+          minimum: 0
       requestBody:
         content:
           application/json:
@@ -1380,7 +1393,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
   /guilds/{guild_id}/roles:
@@ -1401,6 +1413,7 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       responses:
         '200':
           description: Array of role objects
@@ -1428,7 +1441,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
     post:
@@ -1448,6 +1460,7 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       requestBody:
         content:
           application/json:
@@ -1483,7 +1496,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
   /guilds/{guild_id}/roles/{role_id}:
@@ -1504,12 +1516,14 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       - name: role_id
         in: path
         required: true
         schema:
           type: integer
           format: int64
+          minimum: 0
       responses:
         '200':
           description: Role object
@@ -1535,7 +1549,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
     delete:
@@ -1555,12 +1568,14 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       - name: role_id
         in: path
         required: true
         schema:
           type: integer
           format: int64
+          minimum: 0
       responses:
         '204':
           description: Role deleted
@@ -1581,7 +1596,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
     patch:
@@ -1601,12 +1615,14 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       - name: role_id
         in: path
         required: true
         schema:
           type: integer
           format: int64
+          minimum: 0
       requestBody:
         content:
           application/json:
@@ -1643,7 +1659,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
   /invites/{code}:
@@ -1676,7 +1691,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
     post:
       tags:
       - invites
@@ -1694,6 +1708,7 @@ paths:
         required: false
         schema:
           type: string
+          nullable: true
       - name: code
         in: path
         required: true
@@ -1724,7 +1739,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
   /login:
@@ -1756,7 +1770,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
   /relationships:
     get:
       tags:
@@ -1782,7 +1795,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
   /relationships/blocks/{target_id}:
@@ -1802,6 +1814,7 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       responses:
         '200':
           description: Relationship object
@@ -1827,7 +1840,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
   /relationships/friends:
@@ -1877,7 +1889,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
   /relationships/friends/{target_id}:
@@ -1897,6 +1908,7 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       responses:
         '200':
           description: Relationship object
@@ -1922,7 +1934,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
   /relationships/{target_id}:
@@ -1946,6 +1957,7 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       responses:
         '204':
           description: Relationship deleted
@@ -1967,7 +1979,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
   /users:
@@ -2005,7 +2016,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
   /users/me:
     get:
       tags:
@@ -2029,7 +2039,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
     delete:
@@ -2062,7 +2071,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
     patch:
@@ -2105,7 +2113,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
   /users/me/channels:
@@ -2133,7 +2140,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
     post:
@@ -2184,7 +2190,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
   /users/{user_id}:
@@ -2204,6 +2209,7 @@ paths:
         schema:
           type: integer
           format: int64
+          minimum: 0
       responses:
         '200':
           description: User object
@@ -2217,7 +2223,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      deprecated: false
       security:
       - token: []
 components:
@@ -2229,25 +2234,23 @@ components:
       - id
       - filename
       - size
-      - url
       properties:
-        description:
+        alt:
           type: string
           description: The description/alt text of the attachment.
+          nullable: true
         filename:
           type: string
           description: The filename of the attachment.
         id:
-          type: integer
-          format: int64
-          description: The snowflake ID of the attachment.
+          type: string
+          format: uuid
+          description: The UUID of the attachment.
         size:
           type: integer
           format: int64
           description: The size of the attachment, in bytes.
-        url:
-          type: string
-          description: The CDN URL of the attachment.
+          minimum: 0
     ChangeEmailPayload:
       type: object
       description: Payload sent when changing a user's email.
@@ -2309,6 +2312,7 @@ components:
               The associated email of the client's account.
 
               If the client is a bot, this is `None`.
+            nullable: true
           friend_request_privacy:
             $ref: '#/components/schemas/PrivacyConfiguration'
           group_dm_privacy:
@@ -2328,6 +2332,7 @@ components:
             type: integer
             format: int64
             description: The ID of the recipient to add to the DM with.
+            minimum: 0
           type:
             type: string
             enum:
@@ -2347,6 +2352,7 @@ components:
             items:
               type: integer
               format: int64
+              minimum: 0
             description: A list of recipient IDs to initially add to the group DM.
           type:
             type: string
@@ -2367,9 +2373,11 @@ components:
             description: |-
               The icon of the channel represented as a
               [Data URI scheme](https://en.wikipedia.org/wiki/Data_URI_scheme), if any.
+            nullable: true
           topic:
             type: string
             description: The topic of the text channel, if any.
+            nullable: true
           type:
             type: string
             enum:
@@ -2384,9 +2392,11 @@ components:
             description: |-
               The icon of the channel represented as a
               [Data URI scheme](https://en.wikipedia.org/wiki/Data_URI_scheme), if any.
+            nullable: true
           topic:
             type: string
             description: The topic of the text channel, if any.
+            nullable: true
           type:
             type: string
             enum:
@@ -2401,6 +2411,7 @@ components:
             description: |-
               The icon of the channel represented as a
               [Data URI scheme](https://en.wikipedia.org/wiki/Data_URI_scheme), if any.
+            nullable: true
           type:
             type: string
             enum:
@@ -2411,6 +2422,7 @@ components:
             description: |-
               The user limit of the channel. This should be a value between `0` and `500`. A value
               of `0` is the default and indicates the absence of a user limit.
+            minimum: 0
       - type: object
         required:
         - type
@@ -2432,6 +2444,7 @@ components:
           icon:
             type: string
             description: The icon of the text channel, if any.
+            nullable: true
           name:
             type: string
             description: The name of the text channel.
@@ -2440,10 +2453,13 @@ components:
             items:
               $ref: '#/components/schemas/PermissionOverwrite'
             description: A list of permission overwrites to apply to the channel, if any.
+            nullable: true
           parent_id:
             type: integer
             format: int64
             description: The ID of the category to create the channel in, if any.
+            nullable: true
+            minimum: 0
       description: The request body sent to create a new channel in a guild.
     CreateGuildPayload:
       type: object
@@ -2454,16 +2470,19 @@ components:
         banner:
           type: string
           description: The banner URL for the guild. Must be a valid URL, or `None` to not set a banner.
+          nullable: true
         description:
           type: string
           description: |-
             The description of the guild. Must be between 0 and 1000 characters, or `None` for
             no description.
+          nullable: true
         icon:
           type: string
           description: |-
             The icon for the guild. Must be a valid URL, or `None` to not set an icon. This should be
             a [Data URI scheme](https://en.wikipedia.org/wiki/Data_URI_scheme) if provided.
+          nullable: true
         name:
           type: string
           description: The name of the guild. Must be between 2 and 100 characters.
@@ -2472,6 +2491,7 @@ components:
           description: |-
             A nonce to include with the guild. This is not stored and can be used to identify the
             guild later on (it is relayed through the websocket).
+          nullable: true
         public:
           type: boolean
           description: Whether the guild should be public or not. Defaults to `false`.
@@ -2487,12 +2507,14 @@ components:
           description: |-
             The duration of the invite, in seconds. Must be between 0 and 604_800 (7 days), or leave
             empty for an invite that never expires.
+          minimum: 0
         max_uses:
           type: integer
           format: int32
           description: |-
             The maximum number of uses for the invite. Must be at least 1, or leave empty for unlimited
             uses.
+          minimum: 0
     CreateMessagePayload:
       type: object
       description: Payload sent to send a message.
@@ -2502,6 +2524,7 @@ components:
           description: |-
             The content of the message, if any. If specified, this should be a string with a size of at
             most 4 KB.
+          nullable: true
         embeds:
           type: array
           items:
@@ -2514,6 +2537,7 @@ components:
           description: |-
             A nonce to include with the message. This is not stored and can be used to identify the
             message later on (it is relayed through the websocket).
+          nullable: true
     CreateRolePayload:
       type: object
       description: Payload sent to create a new role in a guild.
@@ -2524,6 +2548,8 @@ components:
           type: integer
           format: int32
           description: The color of the role. Leave empty for the default/inherited color.
+          nullable: true
+          minimum: 0
         hoisted:
           type: boolean
           description: Whether the role should be hoisted.
@@ -2543,6 +2569,10 @@ components:
       - email
       - password
       properties:
+        display_name:
+          type: string
+          description: The global display name of the user. Must be between 2 and 32 characters.
+          nullable: true
         email:
           type: string
           format: email
@@ -2553,7 +2583,9 @@ components:
           description: The password of the user. Must be between 8 and 32 characters.
         username:
           type: string
-          description: The username of the user. Must be between 2 and 32 characters.
+          description: |-
+            The unique username of the user. Must between 2 and 32 characters and only contain
+            alphanumeric characters, periods (.), hyphens (-), and underscores (_).
     CreateUserResponse:
       type: object
       description: Data returned when creating a new user.
@@ -2565,6 +2597,7 @@ components:
           type: integer
           format: int64
           description: The ID of the user.
+          minimum: 0
         token:
           type: string
           description: The token to use for authentication.
@@ -2600,12 +2633,14 @@ components:
             type: integer
             format: int64
             description: The ID of the channel.
+            minimum: 0
       description: Represents a direct-message-like channel that does not belong in a guild.
     DmChannelInfo:
       oneOf:
       - type: object
         description: A normal DM channel.
         required:
+        - recipient_ids
         - type
         properties:
           recipient_ids:
@@ -2630,6 +2665,7 @@ components:
           icon:
             type: string
             description: The URL of the group's icon, if any.
+            nullable: true
           name:
             type: string
             description: The name of the group chat.
@@ -2637,15 +2673,18 @@ components:
             type: integer
             format: int64
             description: The ID of the owner of the group chat.
+            minimum: 0
           recipient_ids:
             type: array
             items:
               type: integer
               format: int64
+              minimum: 0
             description: A list of recipients in the group chat by user ID.
           topic:
             type: string
             description: The topic of the group chat, if any.
+            nullable: true
           type:
             type: string
             enum:
@@ -2671,6 +2710,7 @@ components:
           description: |-
             The new name of the channel. If left blank, the name will not be changed. Takes effect for
             all channels except for user DMs.
+          nullable: true
         topic:
           type: string
           description: |-
@@ -2683,6 +2723,8 @@ components:
           description: |-
             The new user limit of the voice channel. Explicitly setting this to `0` will remove the
             current limit, if there is any. Only takes effect for guild voice channels.
+          nullable: true
+          minimum: 0
     EditClientMemberPayload:
       type: object
       description: The payload send to edit the authenticated user as a member.
@@ -2720,9 +2762,11 @@ components:
         name:
           type: string
           description: The new name of the guild. Leave empty to keep the current name.
+          nullable: true
         public:
           type: boolean
           description: Whether the guild should be public or not. Leave empty to keep the current setting.
+          nullable: true
     EditMemberPayload:
       type: object
       description: The payload sent to edit a member.
@@ -2738,6 +2782,7 @@ components:
           items:
             type: integer
             format: int64
+            minimum: 0
           description: |-
             If provided, this is a bulk overwrite of the member's roles. Any roles not in this list
             will be removed from the member, and any roles in this list that are managable by the
@@ -2748,6 +2793,7 @@ components:
 
             The default role will always be added to the member, regardless of whether it is in this
             list.
+          nullable: true
     EditMessagePayload:
       type: object
       description: Payload sent to edit a message.
@@ -2765,6 +2811,7 @@ components:
 
             This will overwrite any existing embeds if specified.
             This wlil remove all embeds if set to either an empty list or explicitly set to `null`.
+          nullable: true
     EditRolePayload:
       type: object
       description: Payload sent to edit a role.
@@ -2776,17 +2823,23 @@ components:
             The color of the role. Set to `null` for the default/inherited color, and leave empty
             to leave it alone
           nullable: true
+          minimum: 0
         hoisted:
           type: boolean
           description: Whether the role should be hoisted.
+          nullable: true
         mentionable:
           type: boolean
           description: Whether the role should be mentionable by anyone.
+          nullable: true
         name:
           type: string
           description: The new name of the role, if any.
+          nullable: true
         permissions:
-          $ref: '#/components/schemas/PermissionPair'
+          allOf:
+          - $ref: '#/components/schemas/PermissionPair'
+          nullable: true
     EditUserPayload:
       type: object
       description: Payload sent when editing a user.
@@ -2811,9 +2864,16 @@ components:
             The new bio of the user. Leave empty to keep the current bio, and set to `null` to remove
             the bio.
           nullable: true
+        display_name:
+          type: string
+          description: |-
+            The new display name of the user. Leave empty to keep the current display name, and set to
+            `null` to remove the display name.
+          nullable: true
         username:
           type: string
           description: The new username of the user. Leave empty to keep the current username.
+          nullable: true
     Embed:
       type: object
       description: |-
@@ -2831,14 +2891,18 @@ components:
           type: integer
           format: int32
           description: The color of the embed, shown as a stripe on the left side of the embed.
+          nullable: true
+          minimum: 0
         description:
           type: string
           description: The description, or body text of the embed.
+          nullable: true
         fields:
           type: array
           items:
             $ref: '#/components/schemas/EmbedField'
           description: A list of fields in the embed.
+          nullable: true
         footer:
           $ref: '#/components/schemas/EmbedFooter'
         hue:
@@ -2847,19 +2911,25 @@ components:
           description: |-
             The hue of the main body of the background. This is only available for rich embeds. This
             should be a number between `0` and `100`, measured as a percentage.
+          nullable: true
+          minimum: 0
         image:
           type: string
           description: The image URL of the embed.
+          nullable: true
         thumbnail:
           type: string
           description: The thumbnail URL of the embed.
+          nullable: true
         timestamp:
           type: string
           format: date-time
           description: The timestamp of the embed.
+          nullable: true
         title:
           type: string
           description: The title of the embed.
+          nullable: true
         type:
           $ref: '#/components/schemas/EmbedType'
         url:
@@ -2867,6 +2937,7 @@ components:
           description: |-
             The URL of the embed, shown as a hyperlink in the title. Only available if the embed has a
             title.
+          nullable: true
     EmbedAuthor:
       type: object
       description: The author information of a message embed.
@@ -2876,12 +2947,14 @@ components:
         icon_url:
           type: string
           description: The URL of the author's icon.
+          nullable: true
         name:
           type: string
           description: The name of the author.
         url:
           type: string
           description: The URL of the author, shown as a hyperlink of the author's name.
+          nullable: true
     EmbedField:
       type: object
       description: Information about an embed's field.
@@ -2906,6 +2979,7 @@ components:
         icon_url:
           type: string
           description: The URL of the footer's icon.
+          nullable: true
         text:
           type: string
           description: The text of the footer.
@@ -3073,6 +3147,7 @@ components:
             type: integer
             format: int64
             description: The ID of the guild you are not a member of.
+            minimum: 0
           message:
             type: string
             description: The error message.
@@ -3091,6 +3166,7 @@ components:
             type: integer
             format: int64
             description: The ID of the guild you are not the owner of.
+            minimum: 0
           message:
             type: string
             description: The error message.
@@ -3112,10 +3188,12 @@ components:
             type: integer
             format: int32
             description: The desired position your top role should be in the role hierarchy.
+            minimum: 0
           guild_id:
             type: integer
             format: int64
             description: The ID of the guild you are not the owner of.
+            minimum: 0
           message:
             type: string
             description: The error message.
@@ -3123,10 +3201,12 @@ components:
             type: integer
             format: int64
             description: The ID of your top role. This is the role you possess with the highest position.
+            minimum: 0
           top_role_position:
             type: integer
             format: int32
             description: The position of your top role.
+            minimum: 0
           type:
             type: string
             enum:
@@ -3143,6 +3223,7 @@ components:
             type: integer
             format: int64
             description: The ID of the guild you are missing permissions in.
+            minimum: 0
           message:
             type: string
             description: The error message.
@@ -3164,6 +3245,7 @@ components:
             type: integer
             format: int64
             description: The ID of the guild the role is in.
+            minimum: 0
           message:
             type: string
             description: The error message.
@@ -3171,6 +3253,7 @@ components:
             type: integer
             format: int64
             description: The ID of the role that is managed.
+            minimum: 0
           type:
             type: string
             enum:
@@ -3188,6 +3271,7 @@ components:
             type: integer
             format: int64
             description: The ID of the guild or group DM you are trying to leave.
+            minimum: 0
           message:
             type: string
             description: The error message.
@@ -3222,6 +3306,7 @@ components:
             type: integer
             format: int64
             description: The ID of the bot you are trying to friend.
+            minimum: 0
           type:
             type: string
             enum:
@@ -3245,6 +3330,7 @@ components:
             type: integer
             format: int64
             description: The ID of the user you are attempting to interact with.
+            minimum: 0
           type:
             type: string
             enum:
@@ -3263,6 +3349,7 @@ components:
             type: integer
             format: int64
             description: The ID of the user that blocked you.
+            minimum: 0
           type:
             type: string
             enum:
@@ -3332,6 +3419,7 @@ components:
           debug:
             type: string
             description: A debug version of the error, or `None` if there is no debug version.
+            nullable: true
           message:
             type: string
             description: The error message.
@@ -3342,6 +3430,7 @@ components:
           what:
             type: string
             description: What caused the error. `None` if unknown.
+            nullable: true
       description: An error that occurs within Adapt.
       discriminator:
         propertyName: type
@@ -3362,6 +3451,7 @@ components:
               * The client retrieves the response after a request to join a guild through an invite
               * The client receives a ready event containing all guild data through the gateway.
               * The client receives a guild create event through the gateway.
+            nullable: true
           members:
             type: array
             items:
@@ -3374,6 +3464,7 @@ components:
               * The client retrieves the response after a request to join a guild through an invite
               * The client receives a ready event containing all guild data through the gateway.
               * The client receives a guild create event through the gateway.
+            nullable: true
           roles:
             type: array
             items:
@@ -3386,6 +3477,7 @@ components:
               * The client retrieves the response after a request to join a guild through an invite
               * The client receives a ready event containing all guild data through the gateway.
               * The client receives a guild create event through the gateway.
+            nullable: true
       description: Represents a guild with all information, sometimes referred to as a server.
     GuildChannel:
       allOf:
@@ -3402,10 +3494,12 @@ components:
             type: integer
             format: int64
             description: The ID of the guild that this channel is in.
+            minimum: 0
           id:
             type: integer
             format: int64
             description: The ID of the channel.
+            minimum: 0
           name:
             type: string
             description: The name of the channel.
@@ -3420,6 +3514,8 @@ components:
             description: |-
               The ID of the parent category of the channel. This is `None` if the channel is not in a
               category.
+            nullable: true
+            minimum: 0
           position:
             type: integer
             format: int32
@@ -3447,6 +3543,7 @@ components:
               [1] Yet Another Category
               [0] another-text-channel
               ```
+            minimum: 0
       description: Represents a channel in a guild.
     GuildChannelInfo:
       oneOf:
@@ -3486,6 +3583,7 @@ components:
             description: |-
               The user limit of the channel. This should be a value between `0` and `500`. A value
               of `0` indicates the absence of a user limit.
+            minimum: 0
       - type: object
         required:
         - type
@@ -3511,6 +3609,7 @@ components:
           items:
             type: integer
             format: int64
+            minimum: 0
           description: |-
             A list of guild IDs representing guilds that were placed in this folder, in order from
             top to bottom.
@@ -3523,6 +3622,7 @@ components:
 
             This is `None` if this folder represents the collection of guilds
             that are not in any folders, or in other terms, the root folder.
+          nullable: true
     GuildFolderInfo:
       type: object
       description: |-
@@ -3536,6 +3636,7 @@ components:
           type: integer
           format: int32
           description: The color of the folder.
+          minimum: 0
         name:
           type: string
           description: The name of the folder.
@@ -3551,10 +3652,13 @@ components:
           description: |-
             The number of members that are online. If this was part of a partial guild object, then
             this will be `None`.
+          nullable: true
+          minimum: 0
         total:
           type: integer
           format: int32
           description: The total number of members in the guild.
+          minimum: 0
     Invite:
       type: object
       description: |-
@@ -3577,29 +3681,36 @@ components:
           format: date-time
           description: A timestamp representing when this invite was created.
         guild:
-          $ref: '#/components/schemas/PartialGuild'
+          allOf:
+          - $ref: '#/components/schemas/PartialGuild'
+          nullable: true
         guild_id:
           type: integer
           format: int64
           description: The ID of the guild this invite leads to.
+          minimum: 0
         inviter_id:
           type: integer
           format: int64
           description: The ID of the user that created this invite.
+          minimum: 0
         max_age:
           type: integer
           format: int32
           description: |-
             How long this invite is valid for, in seconds. ``0`` if this invite never expires. This
             counts from the time the invite was created (see `created_at`).
+          minimum: 0
         max_uses:
           type: integer
           format: int32
           description: How many times this invite can be used. ``0`` if unlimited.
+          minimum: 0
         uses:
           type: integer
           format: int32
           description: How many times this invite has been used.
+          minimum: 0
     LoginRequest:
       type: object
       description: The request body for POST /login
@@ -3630,6 +3741,7 @@ components:
           type: integer
           format: int64
           description: The user ID of the logged in user.
+          minimum: 0
     MalformedBodyErrorType:
       type: string
       description: The categorization of why the body is malformed.
@@ -3637,6 +3749,7 @@ components:
       - invalid_content_type
       - invalid_utf8
       - invalid_json
+      - invalid_multipart
     MaybePartialUser:
       oneOf:
       - $ref: '#/components/schemas/User'
@@ -3648,6 +3761,7 @@ components:
           id:
             type: integer
             format: int64
+            minimum: 0
       description: Potentially a partial user.
     Member:
       allOf:
@@ -3661,6 +3775,7 @@ components:
             type: integer
             format: int64
             description: The ID of the guild this member is in.
+            minimum: 0
           joined_at:
             type: string
             format: date-time
@@ -3668,12 +3783,15 @@ components:
           nick:
             type: string
             description: The nickname of the member. `None` if the member has no nickname.
+            nullable: true
           roles:
             type: array
             items:
               type: integer
               format: int64
+              minimum: 0
             description: A list of IDs of the roles that the member has. This could be `None` in some cases.
+            nullable: true
       description: Represents a member of a guild. Members are user objects associated with a guild.
     MemberOrUser:
       oneOf:
@@ -3698,20 +3816,26 @@ components:
               $ref: '#/components/schemas/Attachment'
             description: A list of attachments included in this message.
           author:
-            $ref: '#/components/schemas/MemberOrUser'
+            allOf:
+            - $ref: '#/components/schemas/MemberOrUser'
+            nullable: true
           author_id:
             type: integer
             format: int64
             description: |-
               The snowflake ID of the author of this message, or `None` if this is a system message, or if
               the user has been deleted.
+            nullable: true
+            minimum: 0
           channel_id:
             type: integer
             format: int64
             description: The snowflake ID of the channel this message was sent in.
+            minimum: 0
           content:
             type: string
             description: The text content of this message.
+            nullable: true
           embeds:
             type: array
             items:
@@ -3723,14 +3847,18 @@ components:
             type: integer
             format: int64
             description: The snowflake ID of the message.
+            minimum: 0
           revision_id:
             type: integer
             format: int64
             description: The revision ID of the message. This is `None` if this message is the current revision.
+            nullable: true
+            minimum: 0
           stars:
             type: integer
             format: int32
             description: The amount of stars this message has received.
+            minimum: 0
       description: Represents a text or system message in a channel.
     MessageEmbedFieldAlignment:
       type: string
@@ -3768,6 +3896,7 @@ components:
                 type: integer
                 format: int64
                 description: The ID of the user who joined.
+                minimum: 0
           type:
             type: string
             enum:
@@ -3787,6 +3916,7 @@ components:
                 type: integer
                 format: int64
                 description: The ID of the user who left.
+                minimum: 0
           type:
             type: string
             enum:
@@ -3807,10 +3937,12 @@ components:
                 type: integer
                 format: int64
                 description: The ID of the user that pinned the message.
+                minimum: 0
               pinned_message_id:
                 type: integer
                 format: int64
                 description: The ID of the message that was pinned.
+                minimum: 0
           type:
             type: string
             enum:
@@ -3830,20 +3962,26 @@ components:
         banner:
           type: string
           description: The URL of the banner of the guild.
+          nullable: true
         description:
           type: string
           description: The description of the guild.
+          nullable: true
         flags:
           $ref: '#/components/schemas/GuildFlags'
         icon:
           type: string
           description: The URL of the icon of the guild.
+          nullable: true
         id:
           type: integer
           format: int64
           description: The snowflake ID of the guild.
+          minimum: 0
         member_count:
-          $ref: '#/components/schemas/GuildMemberCount'
+          allOf:
+          - $ref: '#/components/schemas/GuildMemberCount'
+          nullable: true
         name:
           type: string
           description: The name of the guild.
@@ -3851,6 +3989,7 @@ components:
           type: integer
           format: int64
           description: The ID of the owner of the guild.
+          minimum: 0
         vanity_url:
           type: string
           description: |-
@@ -3859,6 +3998,7 @@ components:
 
             Guilds have the ability to set vanity URLs once they surpass 100 non-bot members *and* have
             their visibility set to public. The vanity URL code can be between 3 and 32 characters long.
+          nullable: true
     PermissionOverwrite:
       allOf:
       - $ref: '#/components/schemas/PermissionPair'
@@ -3872,6 +4012,7 @@ components:
             description: |-
               The ID of the role or user this overwrite applies to. The model type can be extracted from
               the ID.
+            minimum: 0
       description: Represents a permission overwrite.
     PermissionPair:
       type: object
@@ -3930,16 +4071,20 @@ components:
           description: |-
             The color of the role. This is an integer between 0 and 16777215, or ``None`` if the role
             has no color (in which case it inherits the color).
+          nullable: true
+          minimum: 0
         flags:
           $ref: '#/components/schemas/RoleFlags'
         guild_id:
           type: integer
           format: int64
           description: The ID of the guild this role belongs to.
+          minimum: 0
         id:
           type: integer
           format: int64
           description: The snowflake ID of the role.
+          minimum: 0
         name:
           type: string
           description: The name of the role.
@@ -3955,6 +4100,7 @@ components:
             The backend will try its best to keep all role positions unique, but on the event two
             collide due to something such as a data race, then the true position of these roles will
             not be predictable, and will likely be in the order of model creation.
+          minimum: 0
     RoleFlags:
       type: integer
       format: int32
@@ -3963,12 +4109,7 @@ components:
       description: Payload sent when requesting to add a user as a friend.
       required:
       - username
-      - discriminator
       properties:
-        discriminator:
-          type: integer
-          format: int32
-          description: The discriminator of the user.
         username:
           type: string
           description: The username of the user to add as a friend.
@@ -3994,9 +4135,11 @@ components:
           description: |-
             The slowmode delay of the channel, in **milliseconds**. This should be a value between
             `0` and `86_400_000` (24 hours). `0` indicates the absence of slowmode.
+          minimum: 0
         topic:
           type: string
           description: The topic of the channel, if any.
+          nullable: true
     TokenRetrievalMethod:
       type: string
       description: The method to use to retrieve an authentication token.
@@ -4014,28 +4157,31 @@ components:
       required:
       - id
       - username
-      - discriminator
       - flags
       properties:
         avatar:
           type: string
           description: The URL of the user's avatar. This is `None` if the user has no avatar.
+          nullable: true
         banner:
           type: string
           description: The URL of the user's banner. This is `None` if the user has no banner.
+          nullable: true
         bio:
           type: string
           description: The user's bio. This is `None` if the user has no bio.
-        discriminator:
-          type: integer
-          format: int32
-          description: The discriminator of the user, between 0 and 9999.
+          nullable: true
+        display_name:
+          type: string
+          description: The display name of the user. This is `None` if the user has no display name.
+          nullable: true
         flags:
           $ref: '#/components/schemas/UserFlags'
         id:
           type: integer
           format: int64
           description: The snowflake ID of the user.
+          minimum: 0
         username:
           type: string
           description: The username of the user.

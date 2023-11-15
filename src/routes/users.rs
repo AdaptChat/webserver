@@ -26,33 +26,64 @@ use essence::{
     utoipa, Error, Maybe, NotFoundExt,
 };
 
-fn validate_username(username: impl AsRef<str>) -> Result<(), Error> {
-    let username = username.as_ref();
+fn validate_username_esque(username: &str, field: &str) -> Result<(), Error> {
     let length = username.chars().count();
 
     if length < 2 {
         return Err(Error::InvalidField {
-            field: "username".to_string(),
+            field: field.to_string(),
             message: "Username must be at least 2 characters long".to_string(),
         });
     }
 
     if length > 32 {
         return Err(Error::InvalidField {
-            field: "username".to_string(),
+            field: field.to_string(),
             message: "Username cannot be longer than 32 characters".to_string(),
         });
     }
 
+    Ok(())
+}
+
+fn validate_username(username: impl AsRef<str>) -> Result<(), Error> {
+    const SPECIAL: [char; 3] = ['-', '.', '_'];
+
+    let username = username.as_ref();
+    validate_username_esque(username, "username")?;
+
+    if let Some(forbidden) = username
+        .chars()
+        .find(|c| !c.is_ascii_alphanumeric() && SPECIAL.contains(c))
+    {
+        return Err(Error::InvalidField {
+            field: "username".to_string(),
+            message: format!("Username cannot contain {forbidden:?}"),
+        });
+    }
+
+    if username.starts_with(SPECIAL) || username.ends_with(SPECIAL) {
+        return Err(Error::InvalidField {
+            field: "username".to_string(),
+            message: "First and last character of username must be alphanumeric".to_string(),
+        });
+    }
+
+    Ok(())
+}
+
+fn validate_display_name(display_name: impl AsRef<str>) -> Result<(), Error> {
+    let display_name = display_name.as_ref();
+    validate_username_esque(display_name, "display_name")?;
+
     for forbidden in ['\n', '\r', '#', '@'] {
-        if username.contains(forbidden) {
+        if display_name.contains(forbidden) {
             return Err(Error::InvalidField {
-                field: "username".to_string(),
-                message: format!("Username cannot contain {forbidden:?}"),
+                field: "display_name".to_string(),
+                message: format!("Display name cannot contain {forbidden:?}"),
             });
         }
     }
-
     Ok(())
 }
 
@@ -72,10 +103,14 @@ fn validate_username(username: impl AsRef<str>) -> Result<(), Error> {
 pub async fn create_user(payload: Json<CreateUserPayload>) -> RouteResult<CreateUserResponse> {
     let Json(CreateUserPayload {
         username,
+        display_name,
         email,
         password,
     }) = payload;
     validate_username(&username)?;
+    if let Some(ref display_name) = display_name {
+        validate_display_name(display_name)?;
+    }
 
     let db = get_pool();
     if db.is_email_taken(&email).await? {
@@ -84,13 +119,19 @@ pub async fn create_user(payload: Json<CreateUserPayload>) -> RouteResult<Create
             message: "Email is already taken".to_string(),
         }));
     }
+    if db.is_username_taken(&username).await? {
+        return Err(Response::from(Error::AlreadyTaken {
+            what: "username".to_string(),
+            message: "Username is already taken".to_string(),
+        }));
+    }
 
     let mut transaction = db.begin().await?;
 
     // TODO: node id
     let id = generate_snowflake(ModelType::User, 0);
     transaction
-        .register_user(id, &username, &email, &password)
+        .register_user(id, &username, display_name.as_ref(), &email, &password)
         .await?;
 
     let token = generate_token(id);
@@ -143,6 +184,9 @@ pub async fn edit_user(
 ) -> RouteResult<User> {
     if let Some(ref username) = payload.username {
         validate_username(username)?;
+    }
+    if let Maybe::Value(ref display_name) = payload.display_name {
+        validate_display_name(display_name)?;
     }
     if let Maybe::Value(ref mut avatar) = payload.avatar {
         *avatar = upload_user_avatar(id, avatar).await?;
@@ -304,15 +348,10 @@ pub async fn add_friend(
 
     let db = get_pool();
     let target = db
-        .fetch_user_by_tag(&payload.username, payload.discriminator)
+        .fetch_user_by_username(&payload.username)
         .await?
-        .ok_or_not_found(
-            "user",
-            format!(
-                "User with tag {}#{} does not exist",
-                payload.username, payload.discriminator
-            ),
-        )?;
+        .ok_or_not_found("user", format!("User @{} does not exist", payload.username))?;
+
     if target.id == user_id {
         return Err(Response::from(Error::CannotActOnSelf {
             message: "You cannot send friend requests to yourself.".to_string(),
