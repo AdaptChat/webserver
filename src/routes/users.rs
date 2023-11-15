@@ -54,7 +54,7 @@ fn validate_username(username: impl AsRef<str>) -> Result<(), Error> {
 
     if let Some(forbidden) = username
         .chars()
-        .find(|c| !c.is_ascii_alphanumeric() && SPECIAL.contains(c))
+        .find(|c| !c.is_ascii_alphanumeric() && !SPECIAL.contains(c))
     {
         return Err(Error::InvalidField {
             field: "username".to_string(),
