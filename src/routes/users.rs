@@ -205,8 +205,16 @@ pub async fn edit_user(
     Auth(id, _): Auth,
     Json(mut payload): Json<EditUserPayload>,
 ) -> RouteResult<User> {
+    let mut db = get_pool();
     if let Some(ref username) = payload.username {
         validate_username(username)?;
+
+        if db.is_username_taken_excluding(username, id).await? {
+            return Err(Response::from(Error::AlreadyTaken {
+                what: "username".to_string(),
+                message: "Username is already taken".to_string(),
+            }));
+        }
     }
     if let Maybe::Value(ref display_name) = payload.display_name {
         validate_display_name(display_name)?;
@@ -215,7 +223,7 @@ pub async fn edit_user(
         *avatar = upload_user_avatar(id, avatar).await?;
     }
 
-    let (before, after) = get_pool().edit_user(id, payload).await?;
+    let (before, after) = db.edit_user(id, payload).await?;
 
     #[cfg(feature = "ws")]
     amqp::publish_user_event(
