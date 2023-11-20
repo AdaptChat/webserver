@@ -129,6 +129,7 @@ pub async fn create_user(payload: Json<CreateUserPayload>) -> RouteResult<Create
         display_name,
         email,
         password,
+        ..
     }) = payload;
     validate_username(&username)?;
     if let Some(ref display_name) = display_name {
