@@ -2882,11 +2882,11 @@ components:
         messages.
       required:
       - type
-      - author
-      - footer
       properties:
         author:
-          $ref: '#/components/schemas/EmbedAuthor'
+          allOf:
+          - $ref: '#/components/schemas/EmbedAuthor'
+          nullable: true
         color:
           type: integer
           format: int32
@@ -2904,7 +2904,9 @@ components:
           description: A list of fields in the embed.
           nullable: true
         footer:
-          $ref: '#/components/schemas/EmbedFooter'
+          allOf:
+          - $ref: '#/components/schemas/EmbedFooter'
+          nullable: true
         hue:
           type: integer
           format: int32
