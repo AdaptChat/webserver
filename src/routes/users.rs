@@ -1,7 +1,9 @@
+use std::sync::LazyLock;
+
 #[cfg(feature = "ws")]
 use crate::amqp::prelude::*;
 use crate::{
-    cdn::upload_user_avatar,
+    cdn::{get_client, upload_user_avatar},
     extract::{Auth, Json},
     ratelimit,
     routes::{NoContentResult, RouteResult},
@@ -10,7 +12,7 @@ use crate::{
 use axum::{
     extract::Path,
     handler::Handler,
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     routing::{delete, get, post, put},
     Router,
 };
@@ -25,6 +27,10 @@ use essence::{
     snowflake::generate_snowflake,
     utoipa, Error, Maybe, NotFoundExt,
 };
+use serde::{Deserialize, Serialize};
+
+static TURNSTILE_SECRET_KEY: LazyLock<String> =
+    LazyLock::new(|| std::env::var("TURNSTILE_SECRET_KEY").expect("missing TURNSTILE_SECRET_KEY"));
 
 fn validate_username_esque(username: &str, field: &str) -> Result<(), Error> {
     let length = username.chars().count();
@@ -87,6 +93,52 @@ fn validate_display_name(display_name: impl AsRef<str>) -> Result<(), Error> {
     Ok(())
 }
 
+#[derive(Debug, Serialize)]
+struct TurnstileVerifyRequest {
+    secret: &'static str,
+    response: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    remoteip: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TurnstileVerifyResponse {
+    success: bool,
+    #[serde(rename = "error-codes")]
+    error_codes: Vec<String>,
+    // Ignore other fields
+}
+
+async fn validate_captcha(token: String, ip: Option<String>) -> Result<(), Error> {
+    let resp = get_client()
+        .post("https://challenges.cloudflare.com/turnstile/v0/siteverify")
+        .json(&TurnstileVerifyRequest {
+            secret: &TURNSTILE_SECRET_KEY,
+            response: token,
+            remoteip: ip,
+        })
+        .send()
+        .await
+        .map_err(|e| Error::InternalError {
+            what: Some("error when trying to verify turnstile request".to_string()),
+            message: e.to_string(),
+            debug: Some(format!("{e:?}")),
+        })?
+        .json::<TurnstileVerifyResponse>()
+        .await
+        .map_err(|e| Error::InternalError {
+            what: Some("invalid resp from cloudflare".to_string()),
+            message: e.to_string(),
+            debug: Some(format!("{e:?}")),
+        })?;
+
+    resp.success
+        .then_some(())
+        .ok_or_else(|| Error::InvalidCaptcha {
+            message: resp.error_codes.join(", "),
+        })
+}
+
 /// Check Username Availability
 ///
 /// Checks if a username is available.
@@ -123,17 +175,29 @@ pub async fn check_username(Path(username): Path<String>) -> RouteResult<()> {
         (status = CONFLICT, description = "Username or email is already taken", body = Error),
     ),
 )]
-pub async fn create_user(payload: Json<CreateUserPayload>) -> RouteResult<CreateUserResponse> {
+pub async fn create_user(
+    headers: HeaderMap,
+    payload: Json<CreateUserPayload>,
+) -> RouteResult<CreateUserResponse> {
     let Json(CreateUserPayload {
         username,
         display_name,
         email,
         password,
+        captcha_token,
     }) = payload;
     validate_username(&username)?;
     if let Some(ref display_name) = display_name {
         validate_display_name(display_name)?;
     }
+
+    validate_captcha(
+        captcha_token,
+        headers
+            .get("cf-connecting-ip")
+            .and_then(|v| v.to_str().ok().map(|s| s.to_string())),
+    )
+    .await?;
 
     let db = get_pool();
     if db.is_email_taken(&email).await? {
