@@ -357,6 +357,7 @@ pub async fn delete_message(
 
         db.assert_member_has_permissions_with(guild_id, perms, Permissions::VIEW_CHANNEL)
             .await?;
+        // TODO: #[feature(let_chains)], when stabilized, will make this much cleaner
         if let Some(author_id) = db
             .inspect_message(message_id)
             .await?
@@ -369,10 +370,10 @@ pub async fn delete_message(
                     Permissions::MANAGE_MESSAGES,
                 )
                 .await?;
-            }
 
-            db.assert_top_role_higher_than_target(guild_id, user_id, author_id)
-                .await?;
+                db.assert_top_role_higher_than_target(guild_id, user_id, author_id)
+                    .await?;
+            }
         }
     }
 
