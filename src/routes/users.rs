@@ -109,6 +109,29 @@ struct TurnstileVerifyResponse {
     // Ignore other fields
 }
 
+/// Check Username Availability
+///
+/// Checks if a username is available.
+#[utoipa::path(
+    get,
+    path = "/users/check/{username}",
+    responses(
+        (status = OK, description = "Username is available"),
+        (status = BAD_REQUEST, description = "Invalid username", body = Error),
+        (status = CONFLICT, description = "Username is taken", body = Error),
+    ),
+)]
+pub async fn check_username(Path(username): Path<String>) -> RouteResult<()> {
+    validate_username(&username)?;
+    if get_pool().is_username_taken(&username).await? {
+        return Err(Response::from(Error::AlreadyTaken {
+            what: "username".to_string(),
+            message: "Username is already taken".to_string(),
+        }));
+    }
+    Ok(Response::ok(()))
+}
+
 async fn validate_captcha(token: String, ip: Option<String>) -> Result<(), Error> {
     let resp = get_client()
         .post("https://challenges.cloudflare.com/turnstile/v0/siteverify")
@@ -137,29 +160,6 @@ async fn validate_captcha(token: String, ip: Option<String>) -> Result<(), Error
         .ok_or_else(|| Error::InvalidCaptcha {
             message: resp.error_codes.join(", "),
         })
-}
-
-/// Check Username Availability
-///
-/// Checks if a username is available.
-#[utoipa::path(
-    get,
-    path = "/users/check/{username}",
-    responses(
-        (status = OK, description = "Username is available"),
-        (status = BAD_REQUEST, description = "Invalid username", body = Error),
-        (status = CONFLICT, description = "Username is taken", body = Error),
-    ),
-)]
-pub async fn check_username(Path(username): Path<String>) -> RouteResult<()> {
-    validate_username(&username)?;
-    if get_pool().is_username_taken(&username).await? {
-        return Err(Response::from(Error::AlreadyTaken {
-            what: "username".to_string(),
-            message: "Username is already taken".to_string(),
-        }));
-    }
-    Ok(Response::ok(()))
 }
 
 /// Create User
