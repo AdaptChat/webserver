@@ -8,6 +8,7 @@
 #![cfg_attr(not(feature = "ws"), allow(unused_variables, unused_imports))]
 // #![feature(never_type)]
 #![feature(try_blocks)]
+#![feature(lazy_cell)]
 
 #[macro_use]
 extern crate dotenv_codegen;
@@ -32,6 +33,8 @@ use utoipa_swagger_ui::SwaggerUi;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    dotenv::dotenv().expect("failed to load dotenv");
+
     essence::connect(
         dotenv!("DATABASE_URL", "missing DATABASE_URL environment variable"),
         dotenv!("REDIS_URL", "missing REDIS_URL environment variable"),
