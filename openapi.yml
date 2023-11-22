@@ -2016,6 +2016,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /users/check/{username}:
+    get:
+      tags:
+      - users
+      summary: Check Username Availability
+      description: |-
+        Check Username Availability
+
+        Checks if a username is available.
+      operationId: check_username
+      parameters:
+      - name: username
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Username is available
+        '400':
+          description: Invalid username
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Username is taken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /users/me:
     get:
       tags:
@@ -2568,7 +2599,11 @@ components:
       - username
       - email
       - password
+      - captcha_token
       properties:
+        captcha_token:
+          type: string
+          description: Turnstile CAPTCHA response from Cloudflare.
         display_name:
           type: string
           description: The global display name of the user. Must be between 2 and 32 characters.
@@ -3138,6 +3173,21 @@ components:
           what:
             type: string
             description: Which credential was invalid.
+      - type: object
+        description: |-
+          Invalid Turnstile CAPTCHA token was provided. This is a token provided by Cloudflare
+          when a user completes a CAPTCHA, and is used while registering new users to prevent spam.
+        required:
+        - message
+        - type
+        properties:
+          message:
+            type: string
+            description: The error message.
+          type:
+            type: string
+            enum:
+            - invalid_captcha
       - type: object
         description: You must be a member of the guild to perform the requested action.
         required:

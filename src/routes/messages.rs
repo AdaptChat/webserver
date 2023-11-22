@@ -381,7 +381,10 @@ pub async fn delete_message(
     #[cfg(feature = "ws")]
     amqp::publish_bulk_event(
         guild_id.unwrap_or(channel_id),
-        OutboundMessage::MessageDelete { message_id },
+        OutboundMessage::MessageDelete {
+            channel_id,
+            message_id,
+        },
     )
     .await?;
 

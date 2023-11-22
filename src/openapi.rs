@@ -12,6 +12,7 @@ use essence::{
 #[openapi(
     paths(
         auth::login,
+        users::check_username,
         users::create_user,
         users::get_client_user,
         users::get_user,
