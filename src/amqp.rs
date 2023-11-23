@@ -143,12 +143,7 @@ pub async fn publish_bulk_event<T: Encode + Send>(
     exchange_id: u64,
     event: T,
 ) -> essence::Result<()> {
-    let kind = match SnowflakeReader::new(exchange_id).model_type() {
-        ModelType::Guild => ExchangeKind::Topic,
-        ModelType::Channel => ExchangeKind::Fanout,
-        _ => panic!("invalid exchange id: {exchange_id}"),
-    };
-    publish(&exchange_id.to_string(), kind, true, "all", event).await
+    publish(&exchange_id.to_string(), ExchangeKind::Topic, true, "all", event).await
 }
 
 /// Sends a user-related event to the amqp server.
