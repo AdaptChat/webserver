@@ -151,6 +151,7 @@ pub async fn create_dm_channel(
                 recipient,
                 OutboundMessage::ChannelCreate {
                     channel: Channel::Dm(channel.clone()),
+                    nonce: None,
                 },
             )
         })
@@ -204,7 +205,7 @@ pub async fn get_guild_channels(
 pub async fn create_guild_channel(
     Auth(user_id, _): Auth,
     Path(guild_id): Path<u64>,
-    Json(payload): Json<CreateGuildChannelPayload>,
+    Json(mut payload): Json<CreateGuildChannelPayload>,
 ) -> RouteResult<GuildChannel> {
     validate_channel_name(&payload.name)?;
     if let CreateGuildChannelInfo::Text {
@@ -231,6 +232,9 @@ pub async fn create_guild_channel(
     )
     .await?;
 
+    #[cfg(feature = "ws")]
+    let nonce = payload.nonce.take();
+
     let channel_id = generate_snowflake(ModelType::Channel, 0); // TODO: node ID
     let channel = db
         .create_guild_channel(guild_id, channel_id, payload)
@@ -241,6 +245,7 @@ pub async fn create_guild_channel(
         guild_id,
         OutboundMessage::ChannelCreate {
             channel: Channel::Guild(channel.clone()),
+            nonce,
         },
     )
     .await?;
