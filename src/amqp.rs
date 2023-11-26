@@ -10,7 +10,7 @@ use deadpool_lapin::{
     },
     Object, Pool, Runtime,
 };
-use essence::{models::ModelType, snowflake::SnowflakeReader, Error};
+use essence::Error;
 use std::sync::OnceLock;
 use tokio::sync::RwLock;
 

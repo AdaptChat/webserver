@@ -55,7 +55,11 @@ impl<S> Ratelimit<S> {
         headers.insert("X-RateLimit-Per", per.to_string().parse().unwrap());
     }
 
-    #[allow(clippy::cast_lossless)]
+    #[allow(
+        clippy::cast_lossless,
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss
+    )]
     fn handle_ratelimit(&self, ip: IpAddr, now: Instant) -> Result<u16, AxumResponse> {
         let mut bucket = self
             .buckets
