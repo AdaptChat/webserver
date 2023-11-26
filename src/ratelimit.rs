@@ -16,6 +16,7 @@ use std::{
     future::Future,
     net::{IpAddr, SocketAddr},
     pin::Pin,
+    sync::Arc,
     task::{Context, Poll},
     time::Duration,
 };
@@ -39,19 +40,10 @@ pub struct Ratelimit<S> {
     inner: S,
     rate: u16,
     per: u16,
-    buckets: DashMap<IpAddr, Bucket>,
+    buckets: Arc<DashMap<IpAddr, Bucket>>,
 }
 
 impl<S> Ratelimit<S> {
-    pub fn new(service: S, rate: u16, per: u16) -> Self {
-        Self {
-            inner: service,
-            rate,
-            per,
-            buckets: DashMap::new(),
-        }
-    }
-
     #[inline]
     fn insert_headers(rate: u16, per: u16, headers: &mut HeaderMap) {
         headers.insert("X-RateLimit-Limit", rate.to_string().parse().unwrap());
@@ -59,12 +51,11 @@ impl<S> Ratelimit<S> {
     }
 
     #[allow(clippy::cast_lossless)]
-    fn handle_ratelimit(&mut self, ip: IpAddr) -> Result<u16, AxumResponse> {
+    fn handle_ratelimit(&self, ip: IpAddr) -> Result<u16, AxumResponse> {
         let mut bucket = self
             .buckets
             .entry(ip)
             .or_insert_with(|| Bucket::new(self.rate, Instant::now()));
-        let bucket = bucket.value_mut();
 
         if bucket.reset > Instant::now() {
             let retry_after = bucket.reset.duration_since(Instant::now());
@@ -145,14 +136,34 @@ where
     }
 }
 
-#[derive(Copy, Clone, Debug)]
-pub struct RatelimitLayer(pub u16, pub u16);
+#[derive(Clone, Debug)]
+pub struct RatelimitLayer {
+    pub rate: u16,
+    pub per: u16,
+    pub buckets: Arc<DashMap<IpAddr, Bucket>>,
+}
+
+impl RatelimitLayer {
+    #[must_use]
+    pub fn new(rate: u16, per: u16) -> Self {
+        Self {
+            rate,
+            per,
+            buckets: Arc::new(DashMap::new()),
+        }
+    }
+}
 
 impl<S> Layer<S> for RatelimitLayer {
     type Service = Ratelimit<S>;
 
     fn layer(&self, inner: S) -> Self::Service {
-        Ratelimit::new(inner, self.0, self.1)
+        Ratelimit {
+            inner,
+            rate: self.rate,
+            per: self.per,
+            buckets: self.buckets.clone(),
+        }
     }
 }
 
@@ -196,11 +207,9 @@ fn get_ip(req: &Request<Body>) -> Option<IpAddr> {
 macro_rules! ratelimit {
     ($rate:expr, $per:expr) => {{
         tower::ServiceBuilder::new()
-            .layer(axum::error_handling::HandleErrorLayer::new(|_| async {
-                unreachable!()
-            }))
+            .layer(axum::error_handling::HandleErrorLayer::new(|_| async { unreachable!() }))
             .layer(tower::buffer::BufferLayer::new(1024))
-            .layer(crate::ratelimit::RatelimitLayer($rate, $per))
+            .layer(crate::ratelimit::RatelimitLayer::new($rate, $per))
     }};
 }
 

@@ -195,7 +195,7 @@ pub async fn create_user(
         captcha_token,
         headers
             .get("cf-connecting-ip")
-            .and_then(|v| v.to_str().ok().map(|s| s.to_string())),
+            .and_then(|v| v.to_str().ok().map(ToString::to_string)),
     )
     .await?;
 

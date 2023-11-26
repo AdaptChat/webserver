@@ -45,11 +45,7 @@ fn humanize_size(mut len: usize) -> String {
 /// Initializes the reqwest client.
 pub fn setup() -> reqwest::Result<()> {
     let client = Client::builder()
-        .user_agent(concat!(
-            env!("CARGO_PKG_NAME"),
-            "/",
-            env!("CARGO_PKG_VERSION")
-        ))
+        .user_agent(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")))
         .build()?;
 
     CLIENT.set(client).expect("failed to initialize CDN client");
@@ -75,11 +71,12 @@ fn data_scheme_to_bytes(
         message: "Invalid data scheme".to_string(),
     })?;
 
-    let allowed = if accept_gifs {
-        ["png", "jpeg", "jpg", "gif"].as_slice()
-    } else {
-        ["png", "jpeg", "jpg"].as_slice()
-    };
+    let allowed =
+        if accept_gifs {
+            ["png", "jpeg", "jpg", "gif"].as_slice()
+        } else {
+            ["png", "jpeg", "jpg"].as_slice()
+        };
     let mut ext = &*url.mime_type().subtype;
     if url.mime_type().type_ != "image" || !allowed.contains(&ext) {
         return Err(Error::InvalidField {
@@ -94,13 +91,13 @@ fn data_scheme_to_bytes(
         ext = "jpg";
     }
 
-    let bytes = url
-        .decode_to_vec()
-        .map_err(|_| Error::InvalidField {
-            field: field.to_string(),
-            message: "Invalid image data".to_string(),
-        })?
-        .0;
+    let bytes =
+        url.decode_to_vec()
+            .map_err(|_| Error::InvalidField {
+                field: field.to_string(),
+                message: "Invalid image data".to_string(),
+            })?
+            .0;
 
     let size = bytes.len();
     if size > max_size {

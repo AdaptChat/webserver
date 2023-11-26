@@ -71,9 +71,7 @@ fn validate_channel_topic(topic: &str) -> essence::Result<()> {
     security(("token" = [])),
 )]
 pub async fn get_dm_channels(Auth(user_id, _): Auth) -> RouteResult<Vec<DmChannel>> {
-    Ok(Response::ok(
-        get_pool().fetch_all_dm_channels_for_user(user_id).await?,
-    ))
+    Ok(Response::ok(get_pool().fetch_all_dm_channels_for_user(user_id).await?))
 }
 
 /// Open DM Channel / Create Group DM Channel
