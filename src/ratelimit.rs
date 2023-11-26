@@ -26,12 +26,17 @@ use tokio::time::Instant;
 pub struct Bucket {
     pub count: u16,
     pub reset: Instant,
+    pub previous: Option<Instant>,
 }
 
 impl Bucket {
     #[must_use]
     pub const fn new(count: u16, reset: Instant) -> Self {
-        Self { count, reset }
+        Self {
+            count,
+            reset,
+            previous: None,
+        }
     }
 }
 
@@ -78,12 +83,22 @@ impl<S> Ratelimit<S> {
             return Err(response);
         }
 
-        bucket.count -= 1;
+        let elapsed = bucket
+            .previous
+            .map_or(Duration::from_secs(0), |previous| previous.elapsed());
+
+        // Replenish missed tokens into the bucket
+        let unit = self.per as f32 / self.rate as f32;
+        let count = (elapsed.as_secs_f32() / unit).floor() as u16;
+        bucket.count = (bucket.count + count).min(self.rate) - 1;
+
         if bucket.count == 0 {
             bucket.count = self.rate;
-            bucket.reset = Instant::now() + Duration::from_secs(self.per as u64);
+            bucket.reset =
+                bucket.previous.unwrap_or_else(Instant::now) + Duration::from_secs(self.per as u64);
         }
 
+        bucket.previous = Some(Instant::now());
         Ok(bucket.count)
     }
 }

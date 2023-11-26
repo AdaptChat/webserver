@@ -143,7 +143,14 @@ pub async fn publish_bulk_event<T: Encode + Send>(
     exchange_id: u64,
     event: T,
 ) -> essence::Result<()> {
-    publish(&exchange_id.to_string(), ExchangeKind::Topic, true, "all", event).await
+    publish(
+        &exchange_id.to_string(),
+        ExchangeKind::Topic,
+        true,
+        "all",
+        event,
+    )
+    .await
 }
 
 /// Sends a user-related event to the amqp server.
