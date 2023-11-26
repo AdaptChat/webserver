@@ -517,6 +517,6 @@ pub fn router() -> Router {
         )
         .route(
             "/channels/:channel_id/typing",
-            put(start_typing.layer(ratelimit!(5, 10))).delete(stop_typing.layer(ratelimit!(5, 10))),
+            put(start_typing.layer(ratelimit!(10, 5))).delete(stop_typing.layer(ratelimit!(10, 5))),
         )
 }

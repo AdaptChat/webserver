@@ -523,7 +523,7 @@ pub fn router() -> Router {
     Router::new()
         .route(
             "/channels/:channel_id/messages",
-            get(get_message_history.layer(ratelimit!(3, 7)))
+            get(get_message_history.layer(ratelimit!(5, 5)))
                 .post(create_message.layer(ratelimit!(5, 5))),
         )
         .route(
