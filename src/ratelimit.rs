@@ -56,14 +56,14 @@ impl<S> Ratelimit<S> {
     }
 
     #[allow(clippy::cast_lossless)]
-    fn handle_ratelimit(&self, ip: IpAddr) -> Result<u16, AxumResponse> {
+    fn handle_ratelimit(&self, ip: IpAddr, now: Instant) -> Result<u16, AxumResponse> {
         let mut bucket = self
             .buckets
             .entry(ip)
-            .or_insert_with(|| Bucket::new(self.rate, Instant::now()));
+            .or_insert_with(|| Bucket::new(self.rate, now));
 
-        if bucket.reset > Instant::now() {
-            let retry_after = bucket.reset.duration_since(Instant::now());
+        if bucket.reset > now {
+            let retry_after = bucket.reset.duration_since(now);
 
             let mut response = Response::from(Error::Ratelimited {
                 retry_after: retry_after.as_secs_f32(),
@@ -83,9 +83,9 @@ impl<S> Ratelimit<S> {
             return Err(response);
         }
 
-        let elapsed = bucket
-            .previous
-            .map_or(Duration::from_secs(0), |previous| previous.elapsed());
+        let elapsed = bucket.previous.map_or(Duration::from_secs(0), |previous| {
+            previous.duration_since(now)
+        });
 
         // Replenish missed tokens into the bucket
         let unit = self.per as f32 / self.rate as f32;
@@ -94,11 +94,10 @@ impl<S> Ratelimit<S> {
 
         if bucket.count == 0 {
             bucket.count = self.rate;
-            bucket.reset =
-                bucket.previous.unwrap_or_else(Instant::now) + Duration::from_secs(self.per as u64);
+            bucket.reset = bucket.previous.unwrap_or(now) + Duration::from_secs(self.per as u64);
         }
 
-        bucket.previous = Some(Instant::now());
+        bucket.previous = Some(now);
         Ok(bucket.count)
     }
 }
@@ -118,6 +117,8 @@ where
     }
 
     fn call(&mut self, req: Request<Body>) -> Self::Future {
+        let now = Instant::now();
+
         let Some(ip) = get_ip(&req) else {
             return Box::pin(async {
                 Ok(Response::from(Error::MalformedIp {
@@ -130,7 +131,7 @@ where
             });
         };
 
-        match self.handle_ratelimit(ip) {
+        match self.handle_ratelimit(ip, now) {
             Ok(count) => {
                 let clone = self.inner.clone();
                 let mut inner = std::mem::replace(&mut self.inner, clone);
