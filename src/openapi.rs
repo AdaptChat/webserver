@@ -35,6 +35,7 @@ use essence::{
         channels::get_channel,
         channels::edit_channel,
         channels::delete_channel,
+        channels::acknowledge_channel,
         roles::get_roles,
         roles::get_role,
         roles::create_role,

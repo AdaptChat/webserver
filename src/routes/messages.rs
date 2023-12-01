@@ -235,8 +235,7 @@ pub async fn create_message(
         .await?;
 
     if let Some(attachment) = attachment {
-        db.create_attachment(message_id, 0, attachment.clone())
-            .await?; // FIXME: revision id
+        db.create_attachment(message_id, attachment.clone()).await?;
         message.attachments.push(attachment);
     }
 
@@ -306,7 +305,7 @@ pub async fn edit_message(
     .await?;
 
     let (before, after) = get_pool()
-        .edit_message(channel_id, message_id, user_id, payload)
+        .edit_message(channel_id, message_id, Some(user_id), payload)
         .await?;
 
     #[cfg(feature = "ws")]

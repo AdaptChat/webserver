@@ -14,6 +14,8 @@ use axum::{
     Router,
 };
 use essence::cache::ChannelInspection;
+use essence::db::MessageDbExt;
+use essence::models::UserFlags;
 use essence::{
     db::{get_pool, ChannelDbExt, GuildDbExt, UserDbExt},
     error::UserInteractionType,
@@ -505,26 +507,93 @@ pub async fn stop_typing(Auth(user_id, _): Auth, Path(channel_id): Path<u64>) ->
     .await
 }
 
+/// Acknowledge Channel
+///
+/// Acknowledges a channel up to the given message ID, marking the message and all messages before
+/// it as read.
+#[utoipa::path(
+    put,
+    path = "/channels/{channel_id}/ack/{message_id}",
+    responses(
+        (status = NO_CONTENT, description = "Channel acknowledged"),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = FORBIDDEN, description = "Missing permissions", body = Error),
+        (status = NOT_FOUND, description = "Channel not found", body = Error),
+    ),
+    security(("token" = [])),
+)]
+pub async fn acknowledge_channel(
+    Auth(user_id, flags): Auth,
+    Path(channel_id): Path<u64>,
+    Path(message_id): Path<u64>,
+) -> NoContentResult {
+    if flags.contains(UserFlags::BOT) {
+        // we silently fail for bots for now, this could change to a hard error later
+        return Ok(StatusCode::NO_CONTENT);
+    }
+
+    let mut db = get_pool();
+    let ChannelInspection { guild_id, .. } = db
+        .inspect_channel(channel_id)
+        .await?
+        .ok_or_not_found("channel", format!("Channel with ID {channel_id} not found"))?;
+
+    if let Some(guild_id) = guild_id {
+        db.assert_member_has_permissions(
+            guild_id,
+            user_id,
+            Some(channel_id),
+            Permissions::VIEW_CHANNEL | Permissions::VIEW_MESSAGE_HISTORY,
+        )
+        .await?;
+    } else {
+        db.assert_user_is_recipient(channel_id, user_id).await?;
+    }
+
+    // assert that this message actually exists
+    db.fetch_message(channel_id, message_id)
+        .await?
+        .ok_or_not_found("message", format!("Message with ID {message_id} not found"))?;
+
+    db.ack(user_id, channel_id, message_id).await?;
+
+    #[cfg(feature = "ws")]
+    amqp::publish_user_event(
+        user_id,
+        OutboundMessage::ChannelAck {
+            channel_id,
+            last_message_id: message_id,
+        },
+    )
+    .await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub fn router() -> Router {
     Router::new()
         .route(
             "/guilds/:guild_id/channels",
-            get(get_guild_channels.layer(ratelimit!(3, 6)))
-                .post(create_guild_channel.layer(ratelimit!(3, 10))),
+            get(get_guild_channels.layer(ratelimit!(5, 5)))
+                .post(create_guild_channel.layer(ratelimit!(5, 5))),
         )
         .route(
             "/users/me/channels",
-            get(get_dm_channels.layer(ratelimit!(3, 6)))
-                .post(create_dm_channel.layer(ratelimit!(3, 10))),
+            get(get_dm_channels.layer(ratelimit!(5, 5)))
+                .post(create_dm_channel.layer(ratelimit!(5, 5))),
         )
         .route(
             "/channels/:channel_id",
-            get(get_channel.layer(ratelimit!(4, 6)))
-                .patch(edit_channel.layer(ratelimit!(3, 10)))
-                .delete(delete_channel.layer(ratelimit!(3, 10))),
+            get(get_channel.layer(ratelimit!(5, 5)))
+                .patch(edit_channel.layer(ratelimit!(5, 5)))
+                .delete(delete_channel.layer(ratelimit!(5, 6))),
         )
         .route(
             "/channels/:channel_id/typing",
             put(start_typing.layer(ratelimit!(10, 5))).delete(stop_typing.layer(ratelimit!(10, 5))),
+        )
+        .route(
+            "/channels/:channel_id/ack/:message_id",
+            put(acknowledge_channel.layer(ratelimit!(10, 5))),
         )
 }

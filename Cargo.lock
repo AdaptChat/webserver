@@ -858,6 +858,7 @@ dependencies = [
  "chrono",
  "deadpool-redis",
  "itertools 0.12.0",
+ "regex",
  "ring 0.17.5",
  "serde",
  "serde_json",
