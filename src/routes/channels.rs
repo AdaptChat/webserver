@@ -524,8 +524,7 @@ pub async fn stop_typing(Auth(user_id, _): Auth, Path(channel_id): Path<u64>) ->
 )]
 pub async fn acknowledge_channel(
     Auth(user_id, flags): Auth,
-    Path(channel_id): Path<u64>,
-    Path(message_id): Path<u64>,
+    Path((channel_id, message_id)): Path<(u64, u64)>,
 ) -> NoContentResult {
     if flags.contains(UserFlags::BOT) {
         // we silently fail for bots for now, this could change to a hard error later
