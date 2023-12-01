@@ -244,8 +244,10 @@ pub async fn create_message(
 
     #[cfg(feature = "ws")]
     tokio::spawn(async move {
-        let mut message = message_clone;
+        // auto-ack the message
+        db.ack(user_id, channel_id, message_id).await?;
 
+        let mut message = message_clone;
         // TODO: this should be cached
         message.author = if let Some(guild_id) = guild_id {
             db.fetch_member_by_id(guild_id, user_id)
