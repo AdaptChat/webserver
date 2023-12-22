@@ -9,6 +9,8 @@
 // #![feature(never_type)]
 #![feature(try_blocks)]
 #![feature(lazy_cell)]
+#![feature(maybe_uninit_uninit_array)]
+#![feature(maybe_uninit_array_assume_init)]
 
 #[macro_use]
 extern crate dotenv_codegen;
@@ -17,6 +19,7 @@ extern crate dotenv_codegen;
 pub mod amqp;
 pub mod cdn;
 pub mod extract;
+pub mod notification;
 mod openapi;
 pub mod ratelimit;
 pub mod response;
@@ -42,6 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .await?;
     essence::auth::configure_hasher(include_bytes!("../secret.key")).await;
     cdn::setup()?;
+    notification::start_workers::<5>();
     #[cfg(feature = "ws")]
     amqp::connect().await?;
 

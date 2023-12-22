@@ -628,6 +628,17 @@ pub async fn delete_relationship(
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[derive(Debug, Deserialize)]
+struct RegistrationKeyJson {
+    pub key: String
+}
+
+async fn add_registration_key(Auth(user_id, _): Auth, Json(RegistrationKeyJson{ key }): Json<RegistrationKeyJson>) -> NoContentResult {
+    get_pool().insert_push_key(user_id, key).await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub fn router() -> Router {
     Router::new()
         .route("/users", post(create_user.layer(ratelimit!(3, 15))))
@@ -640,6 +651,10 @@ pub fn router() -> Router {
             get(get_client_user.layer(ratelimit!(3, 5)))
                 .patch(edit_user.layer(ratelimit!(3, 15)))
                 .delete(delete_user.layer(ratelimit!(2, 30))),
+        )
+        .route(
+            "/users/me/notifications",
+            post(add_registration_key.layer(ratelimit!(3, 5)))
         )
         .route("/users/:user_id", get(get_user.layer(ratelimit!(3, 5))))
         .route(

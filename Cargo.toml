@@ -18,9 +18,11 @@ bytes = "1"
 dashmap = "5.4"
 data-url = "0.2"
 deadpool-lapin = { version = "0.10", features = ["serde"], optional = true }
+deadqueue = { version = "0.2", features = ["unlimited"], default-features = false }
 dotenv = "0.15"
 dotenv_codegen = { git = "https://github.com/FerrisChat/dotenv" }
 essence = { path = "../essence", features = ["webserver"] }
+fcm_v1 = { git = "https://github.com/Cryptex-github/fcm_v1.git" }
 forwarded-header-value = "0.1"
 futures-util = "0"
 rand = "0.8"

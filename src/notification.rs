@@ -1,0 +1,104 @@
+use std::{sync::LazyLock, time::Duration, mem::MaybeUninit};
+
+use deadqueue::unlimited::Queue;
+use essence::{db::{get_pool, AuthDbExt}, Result};
+use fcm_v1::{Client, message::{Notification, Message}, auth::Authenticator, Error, android::{AndroidConfig, AndroidMessagePriority}};
+use tokio::{sync::OnceCell, task::JoinHandle};
+
+static FCM_CLIENT: OnceCell<Client> = OnceCell::const_new();
+static QUEUE: LazyLock<Queue<NotificationTask>> = LazyLock::new(Queue::new);
+
+#[derive(Debug)]
+struct NotificationTask {
+    recipients: Vec<String>,
+    msg: Notification,
+}
+
+async fn get_client() -> &'static Client {
+    FCM_CLIENT
+        .get_or_init(|| async {
+            let auth = Authenticator::service_account_from_file(
+                std::env::var("GOOGLE_APPLICATION_CREDENTIALS")
+                    .expect("missing google application credentials"),
+            )
+            .await
+            .expect("failed auth");
+
+            Client::new(auth, "adapt-chat", false, Duration::from_secs(5))
+        })
+        .await
+}
+
+pub fn start_workers<const N: usize>() -> [JoinHandle<()>; N] {
+    let mut handles = MaybeUninit::uninit_array::<N>();
+
+    for i in 0..N {
+        handles[i].write(tokio::spawn(worker()));
+    }
+
+    // SAFETY: Already wrote to every index.
+    unsafe { MaybeUninit::array_assume_init(handles) }
+}
+
+pub async fn push_to_user(user_id: u64, notif: Notification) -> Result<()> {
+    let keys = get_pool().fetch_push_keys(user_id).await?;
+    QUEUE.push(NotificationTask { recipients: keys, msg: notif });
+
+    Ok(())
+}
+
+pub async fn push_to_users(users: impl AsRef<[u64]>, notif: Notification) -> Result<()> {
+    for user_id in users.as_ref() {
+        push_to_user(*user_id, notif.clone()).await?;
+    }
+
+    Ok(())
+}
+
+async fn worker() {
+    loop {
+        let notif = QUEUE.pop().await;
+        let mut message = Message {
+            notification: Some(notif.msg),
+            android: Some(AndroidConfig {
+                priority: Some(AndroidMessagePriority::High),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        for token in notif.recipients {
+            message.token = Some(token);
+
+            for tries in 0..=5 {
+                if tries != 0 {
+                    tokio::time::sleep(Duration::from_secs_f32(tries as f32 * 1.5)).await;
+                }
+
+                if let Err(e) = get_client().await.send(&message).await {
+                    match e {
+                        Error::FCM { status_code, .. } => match status_code {
+                            400 | 404 => {
+                                if let Some(token) = message.token {
+                                    get_pool().delete_push_key(token).await;
+                                }
+                                break;
+                            }
+                            500 | 503 => continue,
+                            _ => {
+                                break;
+                            }
+                        },
+                        Error::Timeout => continue,
+                        _ => {
+                            break;
+                        }
+                    }
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+}
+
