@@ -85,12 +85,8 @@ async fn worker() {
                 if tries != 0 {
                     tokio::time::sleep(Duration::from_millis(tries * 125)).await;
                 }
-
-                let Err(e) = get_client().await.send(&message).await else {
-                    break;
-                };
-                match e {
-                    Error::FCM { status_code, .. } => match status_code {
+                match get_client().await.send(&message).await {
+                    Err(Error::FCM { status_code, .. }) => match status_code {
                         400 | 404 => {
                             // UNWRAP: message.token is the token variable in this iteration
                             let token = message.token.unwrap();
@@ -102,7 +98,7 @@ async fn worker() {
                             break;
                         }
                     },
-                    Error::Timeout => continue,
+                    Err(Error::Timeout) => continue,
                     _ => {
                         break;
                     }
