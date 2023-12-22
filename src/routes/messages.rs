@@ -3,6 +3,7 @@ use crate::amqp::prelude::*;
 use crate::{
     cdn,
     extract::{Auth, CreateMessageData, Json, MultipartIntoErrExt},
+    notification,
     ratelimit::ratelimit,
     routes::{NoContentResult, RouteResult},
     Response,
@@ -18,11 +19,13 @@ use essence::{
     db::{get_pool, ChannelDbExt, GuildDbExt, MemberDbExt, MessageDbExt, RoleDbExt, UserDbExt},
     http::message::{CreateMessagePayload, EditMessagePayload, MessageHistoryQuery},
     models::{
-        Attachment, Embed, MemberOrUser, Message, MessageFlags, MessageInfo, ModelType, Permissions,
+        Attachment, Channel, DmChannelInfo, Embed, MemberOrUser, Message, MessageFlags,
+        MessageInfo, ModelType, Permissions,
     },
     snowflake::generate_snowflake,
     utoipa, Error, Maybe, NotFoundExt,
 };
+use fcm_v1::message::Notification;
 
 async fn maybe_assert_permissions(
     channel_id: u64,
@@ -192,40 +195,39 @@ pub async fn create_message(
     )
     .await?;
 
-    let attachment =
-        if let Some(mut multipart) = multipart {
-            let field = multipart.next_field().await.multipart_into_err()?;
+    let attachment = if let Some(mut multipart) = multipart {
+        let field = multipart.next_field().await.multipart_into_err()?;
 
-            if let Some(field) = field {
-                let filename = field
-                    .file_name()
-                    .ok_or_else(|| Error::InvalidField {
-                        field: field.name().unwrap_or("unknown").to_string(),
-                        message: "missing file name for field".to_string(),
-                    })?
-                    .to_string();
+        if let Some(field) = field {
+            let filename = field
+                .file_name()
+                .ok_or_else(|| Error::InvalidField {
+                    field: field.name().unwrap_or("unknown").to_string(),
+                    message: "missing file name for field".to_string(),
+                })?
+                .to_string();
 
-                let buffer = field.bytes().await.multipart_into_err()?;
-                let size = buffer.len();
+            let buffer = field.bytes().await.multipart_into_err()?;
+            let size = buffer.len();
 
-                let id = cdn::upload_attachment(filename.clone(), buffer.to_vec()).await?;
+            let id = cdn::upload_attachment(filename.clone(), buffer.to_vec()).await?;
 
-                Some(Attachment {
-                    id,
-                    filename,
-                    alt: None,
-                    size: size as u64,
-                })
-            } else {
-                return Err(Error::MissingField {
-                    field: "file".to_string(),
-                    message: "missing attachment field".to_string(),
-                }
-                .into());
-            }
+            Some(Attachment {
+                id,
+                filename,
+                alt: None,
+                size: size as u64,
+            })
         } else {
-            None
-        };
+            return Err(Error::MissingField {
+                field: "file".to_string(),
+                message: "missing attachment field".to_string(),
+            }
+            .into());
+        }
+    } else {
+        None
+    };
 
     let mut db = get_pool();
     let nonce = payload.nonce.take();
@@ -241,6 +243,52 @@ pub async fn create_message(
 
     #[cfg(feature = "ws")]
     let message_clone = message.clone();
+    let notification_message_clone = message.clone();
+
+    tokio::spawn(async move {
+        let channel = db
+            .fetch_channel(channel_id)
+            .await?
+            .expect("channel not found");
+        let mut notif = match channel {
+            Channel::Guild(c) => Notification {
+                title: Some(c.name),
+                image: {
+                    db.fetch_partial_guild(c.guild_id)
+                        .await?
+                        .expect("guild not found")
+                        .icon
+                },
+                ..Default::default()
+            },
+            Channel::Dm(c) => match c.info {
+                DmChannelInfo::Dm {
+                    recipient_ids: (first, second),
+                } => {
+                    let target = if first == user_id { second } else { first };
+
+                    let user = db.fetch_user_by_id(target).await?.expect("user not found");
+                    Notification {
+                        title: Some(user.username),
+                        image: user.avatar,
+                        ..Default::default()
+                    }
+                }
+                DmChannelInfo::Group { name, icon, .. } => Notification {
+                    title: Some(name),
+                    image: icon,
+                    ..Default::default()
+                },
+            },
+        };
+        notif.body = notification_message_clone
+            .content
+            .or_else(|| Some("New Message".to_string()));
+
+        notification::push_to_users(db.fetch_channel_recipients(channel_id).await?, notif).await?;
+
+        Ok::<_, Error>(())
+    });
 
     #[cfg(feature = "ws")]
     tokio::spawn(async move {

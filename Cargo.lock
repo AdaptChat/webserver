@@ -892,6 +892,7 @@ dependencies = [
  "bitflags 1.3.2",
  "chrono",
  "deadpool-redis",
+ "futures-util",
  "itertools 0.12.0",
  "regex",
  "ring 0.17.5",

@@ -68,15 +68,14 @@ pub async fn push_to_users(users: impl AsRef<[u64]> + Send, notif: Notification)
 async fn worker() {
     loop {
         let notif = QUEUE.pop().await;
-        let mut message =
-            Message {
-                notification: Some(notif.msg),
-                android: Some(AndroidConfig {
-                    priority: Some(AndroidMessagePriority::High),
-                    ..Default::default()
-                }),
+        let mut message = Message {
+            notification: Some(notif.msg),
+            android: Some(AndroidConfig {
+                priority: Some(AndroidMessagePriority::High),
                 ..Default::default()
-            };
+            }),
+            ..Default::default()
+        };
 
         for token in notif.recipients {
             message.token = Some(token);

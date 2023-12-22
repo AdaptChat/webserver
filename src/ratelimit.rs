@@ -227,7 +227,9 @@ fn get_ip(req: &Request<Body>) -> Option<IpAddr> {
 macro_rules! ratelimit {
     ($rate:expr, $per:expr) => {{
         tower::ServiceBuilder::new()
-            .layer(axum::error_handling::HandleErrorLayer::new(|_| async { unreachable!() }))
+            .layer(axum::error_handling::HandleErrorLayer::new(|_| async {
+                unreachable!()
+            }))
             .layer(tower::buffer::BufferLayer::new(1024))
             .layer(crate::ratelimit::RatelimitLayer::new($rate, $per))
     }};
