@@ -49,10 +49,13 @@ pub fn start_workers<const N: usize>() -> [JoinHandle<()>; N] {
 
 pub async fn push_to_user(user_id: u64, notif: Notification) -> Result<()> {
     let keys = get_pool().fetch_push_keys(user_id).await?;
-    QUEUE.push(NotificationTask {
-        recipients: keys,
-        msg: notif,
-    });
+
+    if !keys.is_empty() {
+        QUEUE.push(NotificationTask {
+            recipients: keys,
+            msg: notif,
+        });
+    }
 
     Ok(())
 }
