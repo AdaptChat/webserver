@@ -28,8 +28,14 @@ struct CdnAvatarUploadResponse {
     path: String,
 }
 
+#[derive(Deserialize)]
+struct CdnEmojiUploadResponse {
+    path: String,
+}
+
 impl CdnResponse for CdnAttachmentUploadResponse {}
 impl CdnResponse for CdnAvatarUploadResponse {}
+impl CdnResponse for CdnEmojiUploadResponse {}
 
 fn humanize_size(mut len: usize) -> String {
     const SIZES: [&str; 6] = ["B", "kB", "MB", "GB", "TB", "PB"];
@@ -160,6 +166,20 @@ pub async fn upload_user_avatar(user_id: u64, image_data: &str) -> essence::Resu
         &format!("/avatars/{user_id}"),
         bytes,
         format!("avatar.{ext}"),
+    )
+    .await?
+    .path;
+
+    Ok([CDN_URL, &url].concat())
+}
+
+pub async fn upload_custom_emoji(emoji_id: u64, image_data: &str) -> essence::Result<String> {
+    let (bytes, ext) = data_scheme_to_bytes(Some("image"), image_data, true, 512_000)?;
+
+    let url = upload::<CdnEmojiUploadResponse>(
+        &format!("/emojis/{emoji_id}"),
+        bytes,
+        format!("emoji.{ext}"),
     )
     .await?
     .path;

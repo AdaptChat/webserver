@@ -92,7 +92,7 @@ async fn worker() {
                             let _ = get_pool().delete_push_key(token).await;
                             break;
                         }
-                        500 | 503 => continue,
+                        429 | 500 | 503 => continue,
                         _ => {
                             break;
                         }
