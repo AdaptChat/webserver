@@ -102,7 +102,6 @@ async fn worker() {
                             warn!("abnormal status {status_code}: {body}, retrying");
                             continue;
                         },
-                        200 => break,
                         _ => {
                             info!("unknown status code {status_code}: {body}, ignoring.");
                             break;
@@ -110,6 +109,7 @@ async fn worker() {
                     },
                     Err(Error::Timeout) => continue,
                     _ => {
+                        info!("probably Ok");
                         break;
                     }
                 }
