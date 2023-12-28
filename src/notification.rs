@@ -71,6 +71,8 @@ pub async fn push_to_users(users: impl AsRef<[u64]> + Send, notif: Notification)
 async fn worker() {
     loop {
         let notif = QUEUE.pop().await;
+        info!("pushing notification: {notif:?}");
+
         let mut message = Message {
             notification: Some(notif.msg),
             android: Some(AndroidConfig {
@@ -88,15 +90,21 @@ async fn worker() {
                     tokio::time::sleep(Duration::from_millis(tries * 125)).await;
                 }
                 match get_client().await.send(&message).await {
-                    Err(Error::FCM { status_code, .. }) => match status_code {
+                    Err(Error::FCM { status_code, body }) => match status_code {
                         400 | 404 => {
+                            info!("expired registration key, deleting.");
                             // UNWRAP: message.token is the token variable in this iteration
                             let token = message.token.unwrap();
                             let _ = get_pool().delete_push_key(token).await;
                             break;
                         }
-                        429 | 500 | 503 => continue,
+                        429 | 500 | 503 => {
+                            warn!("abnormal status {status_code}: {body}, retrying");
+                            continue;
+                        },
+                        200 => break,
                         _ => {
+                            info!("unknown status code {status_code}: {body}, ignoring.");
                             break;
                         }
                     },

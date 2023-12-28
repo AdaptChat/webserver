@@ -15,6 +15,9 @@
 #[macro_use]
 extern crate dotenv_codegen;
 
+#[macro_use]
+extern crate log;
+
 #[cfg(feature = "ws")]
 pub mod amqp;
 pub mod cdn;
@@ -37,6 +40,7 @@ use utoipa_swagger_ui::SwaggerUi;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().expect("failed to load dotenv");
+    env_logger::init();
 
     essence::connect(
         dotenv!("DATABASE_URL", "missing DATABASE_URL environment variable"),
