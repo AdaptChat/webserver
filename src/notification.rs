@@ -108,10 +108,7 @@ async fn worker() {
                         }
                     },
                     Err(Error::Timeout) => continue,
-                    _ => {
-                        info!("probably Ok");
-                        break;
-                    }
+                    _ => break,
                 }
             }
         }
