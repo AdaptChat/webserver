@@ -1,4 +1,4 @@
-use std::{mem::MaybeUninit, sync::LazyLock, time::Duration};
+use std::{mem::MaybeUninit, sync::LazyLock, time::Duration, collections::HashMap};
 
 use deadqueue::unlimited::Queue;
 use essence::{
@@ -8,13 +8,55 @@ use essence::{
 use fcm_v1::{
     android::{AndroidConfig, AndroidMessagePriority},
     auth::Authenticator,
-    message::{Message, Notification},
-    Client, Error,
+    message::{Message, Notification as FCMNotification},
+    Client, Error, webpush::{WebpushConfig, WebpushFcmOptions},
 };
 use tokio::{sync::OnceCell, task::JoinHandle};
 
 static FCM_CLIENT: OnceCell<Client> = OnceCell::const_new();
 static QUEUE: LazyLock<Queue<NotificationTask>> = LazyLock::new(Queue::new);
+
+#[derive(Debug, Clone, Default)]
+pub struct Notification {
+    pub title: Option<String>,
+    pub body: Option<String>,
+    pub icon: Option<String>,
+    pub link_to: Option<String>,
+}
+
+impl Into<FCMNotification> for Notification {
+    fn into(self) -> FCMNotification {
+        FCMNotification {
+            title: self.title,
+            body: self.body,
+            image: self.icon
+        }
+    }
+}
+
+impl Into<Message> for Notification {
+    fn into(self) -> Message {
+        let icon = self.icon.clone();
+        let link_to = self.link_to.clone();
+
+        Message {
+            notification: Some(self.into()),
+            android: Some(AndroidConfig {
+                priority: Some(AndroidMessagePriority::High),
+                ..Default::default()
+            }),
+            webpush: Some(WebpushConfig {
+                fcm_options: WebpushFcmOptions {
+                    link: link_to,
+                    ..Default::default()
+                },
+                notification: icon.map(|v| HashMap::from([("icon".to_string(), v.into())])),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }
+    }
+}
 
 #[derive(Debug)]
 struct NotificationTask {
@@ -73,14 +115,7 @@ async fn worker() {
         let notif = QUEUE.pop().await;
         info!("pushing notification: {notif:?}");
 
-        let mut message = Message {
-            notification: Some(notif.msg),
-            android: Some(AndroidConfig {
-                priority: Some(AndroidMessagePriority::High),
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
+        let mut message: Message = notif.msg.into();
 
         for token in notif.recipients {
             message.token = Some(token);

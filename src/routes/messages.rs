@@ -3,7 +3,7 @@ use crate::amqp::prelude::*;
 use crate::{
     cdn,
     extract::{Auth, CreateMessageData, Json, MultipartIntoErrExt},
-    notification,
+    notification::{self, Notification},
     ratelimit::ratelimit,
     routes::{NoContentResult, RouteResult},
     Response,
@@ -25,7 +25,6 @@ use essence::{
     snowflake::generate_snowflake,
     utoipa, Error, Maybe, NotFoundExt,
 };
-use fcm_v1::message::Notification;
 
 async fn maybe_assert_permissions(
     channel_id: u64,
@@ -250,40 +249,41 @@ pub async fn create_message(
             .fetch_channel(channel_id)
             .await?
             .expect("channel not found");
-        let mut notif = match channel {
-            Channel::Guild(c) => Notification {
-                title: Some(c.name),
-                image: {
-                    db.fetch_partial_guild(c.guild_id)
-                        .await?
-                        .expect("guild not found")
-                        .icon
-                },
-                ..Default::default()
-            },
-            Channel::Dm(c) => match c.info {
-                DmChannelInfo::Dm {
-                    recipient_ids: (first, second),
-                } => {
-                    let target = if first == user_id { second } else { first };
+        let user = db.fetch_user_by_id(user_id).await?.expect("user not found");
 
-                    let user = db.fetch_user_by_id(target).await?.expect("user not found");
+        let mut notif = match channel {
+            Channel::Guild(c) => {
+                let guild = db.fetch_partial_guild(c.guild_id)
+                .await?
+                .expect("guild not found");
+
+                Notification {
+                    title: Some(format!("{} (#{}, {})", user.username, c.name,guild.name)),
+                    link_to: Some(format!("https://app.adapt.chat/guilds/{}/{}", guild.id, c.id)),
+                    ..Default::default()
+            }},
+            Channel::Dm(c) => match c.info {
+                DmChannelInfo::Dm { .. } => {
                     Notification {
-                        title: Some(user.username),
-                        image: user.avatar,
+                        title: Some(user.username.clone()),
+                        link_to: Some(format!("https://app.adapt.chat/dms/{}", c.id)),
                         ..Default::default()
                     }
                 }
                 DmChannelInfo::Group { name, icon, .. } => Notification {
-                    title: Some(name),
-                    image: icon,
+                    title: Some(format!("{} ({name})", user.username)),
+                    icon: icon,
+                    link_to: Some(format!("https://app.adapt.chat/dms/{}", c.id)),
                     ..Default::default()
                 },
             },
         };
+
         notif.body = notification_message_clone
             .content
             .or_else(|| Some("New Message".to_string()));
+
+        notif.icon = Some(notif.icon.or(user.avatar).unwrap_or_else(|| format!("https://convey.adapt.chat/avatars/{user_id}/default.png?theme=dark&width=96")));
 
         notification::push_to_users(db.fetch_channel_recipients(channel_id).await?, notif).await?;
 
