@@ -21,10 +21,12 @@ deadpool-lapin = { version = "0.10", features = ["serde"], optional = true }
 deadqueue = { version = "0.2", features = ["unlimited"], default-features = false }
 dotenv = "0.15"
 dotenv_codegen = { git = "https://github.com/FerrisChat/dotenv" }
+env_logger = "0.10"
 essence = { path = "../essence", features = ["webserver"] }
 fcm_v1 = { git = "https://github.com/Cryptex-github/fcm_v1.git" }
 forwarded-header-value = "0.1"
 futures-util = "0"
+log = "0.4"
 rand = "0.8"
 reqwest = { version = "0.11", default-features = false, features = ["gzip", "json", "multipart", "rustls-tls"] }
 rmp-serde = "1"

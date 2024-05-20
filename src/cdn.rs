@@ -28,8 +28,14 @@ struct CdnAvatarUploadResponse {
     path: String,
 }
 
+#[derive(Deserialize)]
+struct CdnEmojiUploadResponse {
+    path: String,
+}
+
 impl CdnResponse for CdnAttachmentUploadResponse {}
 impl CdnResponse for CdnAvatarUploadResponse {}
+impl CdnResponse for CdnEmojiUploadResponse {}
 
 fn humanize_size(mut len: usize) -> String {
     const SIZES: [&str; 6] = ["B", "kB", "MB", "GB", "TB", "PB"];
@@ -45,7 +51,11 @@ fn humanize_size(mut len: usize) -> String {
 /// Initializes the reqwest client.
 pub fn setup() -> reqwest::Result<()> {
     let client = Client::builder()
-        .user_agent(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")))
+        .user_agent(concat!(
+            env!("CARGO_PKG_NAME"),
+            "/",
+            env!("CARGO_PKG_VERSION")
+        ))
         .build()?;
 
     CLIENT.set(client).expect("failed to initialize CDN client");
@@ -71,12 +81,11 @@ fn data_scheme_to_bytes(
         message: "Invalid data scheme".to_string(),
     })?;
 
-    let allowed =
-        if accept_gifs {
-            ["png", "jpeg", "jpg", "gif"].as_slice()
-        } else {
-            ["png", "jpeg", "jpg"].as_slice()
-        };
+    let allowed = if accept_gifs {
+        ["png", "jpeg", "jpg", "gif"].as_slice()
+    } else {
+        ["png", "jpeg", "jpg"].as_slice()
+    };
     let mut ext = &*url.mime_type().subtype;
     if url.mime_type().type_ != "image" || !allowed.contains(&ext) {
         return Err(Error::InvalidField {
@@ -91,13 +100,13 @@ fn data_scheme_to_bytes(
         ext = "jpg";
     }
 
-    let bytes =
-        url.decode_to_vec()
-            .map_err(|_| Error::InvalidField {
-                field: field.to_string(),
-                message: "Invalid image data".to_string(),
-            })?
-            .0;
+    let bytes = url
+        .decode_to_vec()
+        .map_err(|_| Error::InvalidField {
+            field: field.to_string(),
+            message: "Invalid image data".to_string(),
+        })?
+        .0;
 
     let size = bytes.len();
     if size > max_size {
@@ -157,6 +166,20 @@ pub async fn upload_user_avatar(user_id: u64, image_data: &str) -> essence::Resu
         &format!("/avatars/{user_id}"),
         bytes,
         format!("avatar.{ext}"),
+    )
+    .await?
+    .path;
+
+    Ok([CDN_URL, &url].concat())
+}
+
+pub async fn upload_custom_emoji(emoji_id: u64, image_data: &str) -> essence::Result<String> {
+    let (bytes, ext) = data_scheme_to_bytes(Some("image"), image_data, true, 512_000)?;
+
+    let url = upload::<CdnEmojiUploadResponse>(
+        &format!("/emojis/{emoji_id}"),
+        bytes,
+        format!("emoji.{ext}"),
     )
     .await?
     .path;

@@ -7,6 +7,7 @@ pub type NoContentResult = Result<StatusCode, Response<Error>>;
 
 pub mod auth;
 pub mod channels;
+pub mod emojis;
 pub mod guilds;
 pub mod internal;
 pub mod invites;

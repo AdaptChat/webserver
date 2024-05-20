@@ -1,4 +1,4 @@
-use std::{mem::MaybeUninit, sync::LazyLock, time::Duration};
+use std::{mem::MaybeUninit, sync::LazyLock, time::Duration, collections::HashMap};
 
 use deadqueue::unlimited::Queue;
 use essence::{
@@ -8,13 +8,55 @@ use essence::{
 use fcm_v1::{
     android::{AndroidConfig, AndroidMessagePriority},
     auth::Authenticator,
-    message::{Message, Notification},
-    Client, Error,
+    message::{Message, Notification as FCMNotification},
+    Client, Error, webpush::{WebpushConfig, WebpushFcmOptions},
 };
 use tokio::{sync::OnceCell, task::JoinHandle};
 
 static FCM_CLIENT: OnceCell<Client> = OnceCell::const_new();
 static QUEUE: LazyLock<Queue<NotificationTask>> = LazyLock::new(Queue::new);
+
+#[derive(Debug, Clone, Default)]
+pub struct Notification {
+    pub title: Option<String>,
+    pub body: Option<String>,
+    pub icon: Option<String>,
+    pub link_to: Option<String>,
+}
+
+impl Into<FCMNotification> for Notification {
+    fn into(self) -> FCMNotification {
+        FCMNotification {
+            title: self.title,
+            body: self.body,
+            image: self.icon
+        }
+    }
+}
+
+impl Into<Message> for Notification {
+    fn into(self) -> Message {
+        let icon = self.icon.clone();
+        let link_to = self.link_to.clone();
+
+        Message {
+            notification: Some(self.into()),
+            android: Some(AndroidConfig {
+                priority: Some(AndroidMessagePriority::High),
+                ..Default::default()
+            }),
+            webpush: Some(WebpushConfig {
+                fcm_options: WebpushFcmOptions {
+                    link: link_to,
+                    ..Default::default()
+                },
+                notification: icon.map(|v| HashMap::from([("icon".to_string(), v.into())])),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }
+    }
+}
 
 #[derive(Debug)]
 struct NotificationTask {
@@ -49,10 +91,13 @@ pub fn start_workers<const N: usize>() -> [JoinHandle<()>; N] {
 
 pub async fn push_to_user(user_id: u64, notif: Notification) -> Result<()> {
     let keys = get_pool().fetch_push_keys(user_id).await?;
-    QUEUE.push(NotificationTask {
-        recipients: keys,
-        msg: notif,
-    });
+
+    if !keys.is_empty() {
+        QUEUE.push(NotificationTask {
+            recipients: keys,
+            msg: notif,
+        });
+    }
 
     Ok(())
 }
@@ -68,15 +113,9 @@ pub async fn push_to_users(users: impl AsRef<[u64]> + Send, notif: Notification)
 async fn worker() {
     loop {
         let notif = QUEUE.pop().await;
-        let mut message =
-            Message {
-                notification: Some(notif.msg),
-                android: Some(AndroidConfig {
-                    priority: Some(AndroidMessagePriority::High),
-                    ..Default::default()
-                }),
-                ..Default::default()
-            };
+        info!("pushing notification: {notif:?}");
+
+        let mut message: Message = notif.msg.into();
 
         for token in notif.recipients {
             message.token = Some(token);
@@ -86,22 +125,25 @@ async fn worker() {
                     tokio::time::sleep(Duration::from_millis(tries * 125)).await;
                 }
                 match get_client().await.send(&message).await {
-                    Err(Error::FCM { status_code, .. }) => match status_code {
+                    Err(Error::FCM { status_code, body }) => match status_code {
                         400 | 404 => {
+                            info!("expired registration key, deleting.");
                             // UNWRAP: message.token is the token variable in this iteration
                             let token = message.token.unwrap();
                             let _ = get_pool().delete_push_key(token).await;
                             break;
                         }
-                        500 | 503 => continue,
+                        429 | 500 | 503 => {
+                            warn!("abnormal status {status_code}: {body}, retrying");
+                            continue;
+                        },
                         _ => {
+                            info!("unknown status code {status_code}: {body}, ignoring.");
                             break;
                         }
                     },
                     Err(Error::Timeout) => continue,
-                    _ => {
-                        break;
-                    }
+                    _ => break,
                 }
             }
         }
