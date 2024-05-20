@@ -215,7 +215,6 @@ pub async fn use_invite(
     Ok(Response::ok(member))
 }
 
-#[must_use]
 pub fn router() -> Router {
     Router::new()
         .route(

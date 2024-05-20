@@ -1,6 +1,7 @@
 use crate::Response;
+use axum::body::Body;
 use axum::{
-    body::{Bytes, HttpBody},
+    body::Bytes,
     extract::{
         multipart::{MultipartError, MultipartRejection},
         FromRequest, FromRequestParts, Multipart,
@@ -79,17 +80,14 @@ where
 pub struct Json<T>(pub T);
 
 #[axum::async_trait]
-impl<T, B, S> FromRequest<S, B> for Json<T>
+impl<T, S> FromRequest<S> for Json<T>
 where
     T: DeserializeOwned,
-    B: HttpBody + Send + 'static,
-    B::Data: Send,
-    B::Error: Into<axum::BoxError>,
     S: Send + Sync,
 {
     type Rejection = Response<Error>;
 
-    async fn from_request(req: Request<B>, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request(req: Request<Body>, state: &S) -> Result<Self, Self::Rejection> {
         let content_type = req.headers().get(header::CONTENT_TYPE);
 
         if let Some(c) = content_type {
@@ -140,17 +138,14 @@ where
 pub struct CreateMessageData<T>(pub T, pub Option<Multipart>);
 
 #[axum::async_trait]
-impl<T, B, S> FromRequest<S, B> for CreateMessageData<T>
+impl<T, S> FromRequest<S> for CreateMessageData<T>
 where
     T: DeserializeOwned,
-    B: HttpBody + Send + 'static,
-    B::Data: Into<Bytes> + Send,
-    B::Error: Into<axum::BoxError>,
     S: Send + Sync,
 {
     type Rejection = Response<Error>;
 
-    async fn from_request(req: Request<B>, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request(req: Request<Body>, state: &S) -> Result<Self, Self::Rejection> {
         if req
             .headers()
             .get(header::CONTENT_TYPE)

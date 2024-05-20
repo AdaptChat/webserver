@@ -178,6 +178,7 @@ pub async fn get_message_history(
     ),
     security(("token" = [])),
 )]
+#[allow(clippy::too_many_lines)]
 pub async fn create_message(
     Auth(user_id, _): Auth,
     Path(channel_id): Path<u64>,
@@ -253,26 +254,29 @@ pub async fn create_message(
 
         let mut notif = match channel {
             Channel::Guild(c) => {
-                let guild = db.fetch_partial_guild(c.guild_id)
-                .await?
-                .expect("guild not found");
+                let guild = db
+                    .fetch_partial_guild(c.guild_id)
+                    .await?
+                    .expect("guild not found");
 
                 Notification {
-                    title: Some(format!("{} (#{}, {})", user.username, c.name,guild.name)),
-                    link_to: Some(format!("https://app.adapt.chat/guilds/{}/{}", guild.id, c.id)),
+                    title: Some(format!("{} (#{}, {})", user.username, c.name, guild.name)),
+                    link_to: Some(format!(
+                        "https://app.adapt.chat/guilds/{}/{}",
+                        guild.id, c.id
+                    )),
                     ..Default::default()
-            }},
-            Channel::Dm(c) => match c.info {
-                DmChannelInfo::Dm { .. } => {
-                    Notification {
-                        title: Some(user.username.clone()),
-                        link_to: Some(format!("https://app.adapt.chat/dms/{}", c.id)),
-                        ..Default::default()
-                    }
                 }
+            }
+            Channel::Dm(c) => match c.info {
+                DmChannelInfo::Dm { .. } => Notification {
+                    title: Some(user.username.clone()),
+                    link_to: Some(format!("https://app.adapt.chat/dms/{}", c.id)),
+                    ..Default::default()
+                },
                 DmChannelInfo::Group { name, icon, .. } => Notification {
                     title: Some(format!("{} ({name})", user.username)),
-                    icon: icon,
+                    icon,
                     link_to: Some(format!("https://app.adapt.chat/dms/{}", c.id)),
                     ..Default::default()
                 },
@@ -283,7 +287,9 @@ pub async fn create_message(
             .content
             .or_else(|| Some("New Message".to_string()));
 
-        notif.icon = Some(notif.icon.or(user.avatar).unwrap_or_else(|| format!("https://convey.adapt.chat/avatars/{user_id}/default.png?theme=dark&width=96")));
+        notif.icon = Some(notif.icon.or(user.avatar).unwrap_or_else(|| {
+            format!("https://convey.adapt.chat/avatars/{user_id}/default.png?theme=dark&width=96")
+        }));
 
         notification::push_to_users(db.fetch_channel_recipients(channel_id).await?, notif).await?;
 
@@ -567,7 +573,6 @@ async fn unpin_message(
     Ok(StatusCode::NO_CONTENT)
 }
 
-#[must_use]
 pub fn router() -> Router {
     Router::new()
         .route(

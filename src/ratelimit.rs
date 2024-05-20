@@ -3,10 +3,10 @@ use crate::response::Response;
 use axum::{
     body::Body,
     extract::ConnectInfo,
-    headers::HeaderMap,
     http::{header::FORWARDED, Request},
     response::{IntoResponse, Response as AxumResponse},
 };
+use axum_extra::headers::HeaderMap;
 use dashmap::DashMap;
 use essence::Error;
 use forwarded_header_value::{ForwardedHeaderValue, Identifier};

@@ -31,9 +31,10 @@ pub mod routes;
 pub(crate) use ratelimit::ratelimit;
 pub use response::Response;
 
-use axum::{http::StatusCode, routing::get, Router, Server};
+use axum::{http::StatusCode, routing::get, Router};
 use essence::utoipa::OpenApi;
 use std::net::SocketAddr;
+use tokio::net::TcpListener;
 use tower_http::cors::CorsLayer;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -84,14 +85,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(CorsLayer::permissive());
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8077));
-    Server::bind(&addr)
-        .serve(router.into_make_service_with_connect_info::<SocketAddr>())
-        .with_graceful_shutdown(async {
-            tokio::signal::ctrl_c()
-                .await
-                .expect("failed to install CTRL+C signal handler");
-        })
-        .await?;
+    let listener = TcpListener::bind(addr).await?;
+    axum::serve(
+        listener,
+        router.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .with_graceful_shutdown(async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("failed to install CTRL+C signal handler");
+    })
+    .await?;
 
     Ok(())
 }

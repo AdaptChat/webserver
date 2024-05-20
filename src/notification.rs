@@ -1,4 +1,4 @@
-use std::{mem::MaybeUninit, sync::LazyLock, time::Duration, collections::HashMap};
+use std::{collections::HashMap, mem::MaybeUninit, sync::LazyLock, time::Duration};
 
 use deadqueue::unlimited::Queue;
 use essence::{
@@ -9,7 +9,8 @@ use fcm_v1::{
     android::{AndroidConfig, AndroidMessagePriority},
     auth::Authenticator,
     message::{Message, Notification as FCMNotification},
-    Client, Error, webpush::{WebpushConfig, WebpushFcmOptions},
+    webpush::{WebpushConfig, WebpushFcmOptions},
+    Client, Error,
 };
 use tokio::{sync::OnceCell, task::JoinHandle};
 
@@ -29,7 +30,7 @@ impl Into<FCMNotification> for Notification {
         FCMNotification {
             title: self.title,
             body: self.body,
-            image: self.icon
+            image: self.icon,
         }
     }
 }
@@ -136,7 +137,7 @@ async fn worker() {
                         429 | 500 | 503 => {
                             warn!("abnormal status {status_code}: {body}, retrying");
                             continue;
-                        },
+                        }
                         _ => {
                             info!("unknown status code {status_code}: {body}, ignoring.");
                             break;

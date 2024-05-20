@@ -54,7 +54,7 @@ impl<T: Serialize> IntoResponse for Response<T> {
         axum::http::Response::builder()
             .status(self.0)
             .header(CONTENT_TYPE, "application/json")
-            .body(axum::body::Full::from(bytes))
+            .body(axum::body::Body::from(bytes))
             .expect("invalid http status code received")
             .into_response()
     }
