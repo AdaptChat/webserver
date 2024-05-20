@@ -184,8 +184,19 @@ pub async fn edit_guild(
     db.assert_member_has_permissions(guild_id, user_id, None, Permissions::MANAGE_GUILD)
         .await?;
 
-    let guild = db.edit_guild(guild_id, payload).await?;
-    Ok(Response::ok(guild))
+    let (before, after) = db.edit_guild(guild_id, payload).await?;
+
+    #[cfg(feature = "ws")]
+    amqp::publish_bulk_event(
+        guild_id,
+        OutboundMessage::GuildUpdate {
+            before,
+            after: after.clone(),
+        },
+    )
+    .await?;
+
+    Ok(Response::ok(after))
 }
 
 /// Delete Guild

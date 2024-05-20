@@ -13,17 +13,15 @@ use axum::{
     routing::{get, put},
     Router,
 };
-use essence::cache::ChannelInspection;
-use essence::db::MessageDbExt;
-use essence::models::UserFlags;
 use essence::{
-    db::{get_pool, ChannelDbExt, GuildDbExt, UserDbExt},
+    cache::ChannelInspection,
+    db::{get_pool, ChannelDbExt, GuildDbExt, MessageDbExt, UserDbExt},
     error::UserInteractionType,
     http::channel::{
         CreateDmChannelPayload, CreateGuildChannelInfo, CreateGuildChannelPayload,
         EditChannelPayload,
     },
-    models::{Channel, ChannelType, DmChannel, GuildChannel, ModelType, Permissions},
+    models::{Channel, ChannelType, DmChannel, GuildChannel, ModelType, Permissions, UserFlags},
     snowflake::generate_snowflake,
     utoipa, Error, Maybe, NotFoundExt,
 };
