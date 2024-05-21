@@ -207,7 +207,7 @@ pub async fn get_guild_channels(
 pub async fn create_guild_channel(
     Auth(user_id, _): Auth,
     Path(guild_id): Path<u64>,
-    Json(payload): Json<CreateGuildChannelPayload>,
+    Json(mut payload): Json<CreateGuildChannelPayload>,
 ) -> RouteResult<GuildChannel> {
     validate_channel_name(&payload.name)?;
     if let CreateGuildChannelInfo::Text {
