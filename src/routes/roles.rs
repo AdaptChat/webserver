@@ -1,3 +1,5 @@
+#[cfg(feature = "ws")]
+use crate::amqp::prelude::*;
 use crate::{
     extract::{Auth, Json},
     ratelimit::ratelimit,
@@ -10,7 +12,9 @@ use essence::{
     http::role::{CreateRolePayload, EditRolePayload},
     models::{ModelType, Permissions, Role},
     snowflake::generate_snowflake,
-    utoipa, Error, NotFoundExt,
+    utoipa,
+    ws::OutboundMessage,
+    Error, NotFoundExt,
 };
 
 fn validate_role_name(name: &str) -> Result<(), Error> {
@@ -132,6 +136,10 @@ pub async fn create_role(
 
     let role_id = generate_snowflake(ModelType::Role, 0); // TODO: node id
     let role = db.create_role(guild_id, role_id, payload).await?;
+
+    #[cfg(feature = "ws")]
+    amqp::publish_bulk_event(guild_id, OutboundMessage::RoleCreate { role: role.clone() }).await?;
+
     Ok(Response::ok(role))
 }
 
@@ -192,8 +200,71 @@ pub async fn edit_role(
         }
     }
 
-    let role = db.edit_role(guild_id, role_id, payload).await?;
-    Ok(Response::ok(role))
+    let (before, after) = db.edit_role(guild_id, role_id, payload).await?;
+
+    #[cfg(feature = "ws")]
+    amqp::publish_bulk_event(
+        guild_id,
+        OutboundMessage::RoleUpdate {
+            before,
+            after: after.clone(),
+        },
+    )
+    .await?;
+
+    Ok(Response::ok(after))
+}
+
+/// Edit Role Positions
+///
+/// Modifies the positions of all roles in the guild with the given ID. You must have the
+/// ``MANAGE_ROLES`` permission.
+#[utoipa::path(
+    patch,
+    path = "/guilds/{guild_id}/roles/{role_id}",
+    request_body = Vec<u64>,
+    responses(
+        (status = OK, description = "Modified role positions"),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = FORBIDDEN,
+            description = "\
+                You are forbidden from reordering roles. This can be because:\n\
+                * You are not a member of the guild.\n\
+                * You do not have the `MANAGE_ROLES` permission in the guild.\n\
+                * A role higher than or equal to your top role had its position changed.
+            ",
+            body = Error,
+        ),
+        (
+            status = BAD_REQUEST,
+            description = "\
+                Invalid list of role IDs. Your array must contain all roles in the guild exactly
+                once, including roles above your top role but excluding the default role.
+            ",
+            body = Error,
+        ),
+        (status = NOT_FOUND, description = "Guild or role not found", body = Error),
+    ),
+    security(("token" = [])),
+)]
+pub async fn edit_role_positions(
+    Auth(user_id, _): Auth,
+    Path(guild_id): Path<u64>,
+    Json(role_ids): Json<Vec<u64>>,
+) -> RouteResult<()> {
+    let mut db = get_pool();
+    db.assert_member_has_permissions(guild_id, user_id, None, Permissions::MANAGE_ROLES)
+        .await?;
+    db.edit_role_positions(guild_id, &role_ids, user_id).await?;
+
+    #[cfg(feature = "ws")]
+    amqp::publish_bulk_event(
+        guild_id,
+        OutboundMessage::RolePositionsUpdate { guild_id, role_ids },
+    )
+    .await?;
+
+    Ok(Response::ok(()))
 }
 
 /// Delete Role
@@ -233,6 +304,9 @@ pub async fn delete_role(
         .await?;
     db.delete_role(guild_id, role_id).await?;
 
+    #[cfg(feature = "ws")]
+    amqp::publish_bulk_event(guild_id, OutboundMessage::RoleDelete { role_id }).await?;
+
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -240,7 +314,9 @@ pub fn router() -> Router {
     Router::new()
         .route(
             "/guilds/:guild_id/roles",
-            get(get_roles.layer(ratelimit!(3, 6))).post(create_role.layer(ratelimit!(3, 8))),
+            get(get_roles.layer(ratelimit!(3, 6)))
+                .post(create_role.layer(ratelimit!(3, 8)))
+                .patch(edit_role_positions.layer(ratelimit!(2, 10))),
         )
         .route(
             "/guilds/:guild_id/roles/:role_id",

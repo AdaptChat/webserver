@@ -15,8 +15,6 @@ paths:
       - channels
       summary: Get Channel
       description: |-
-        Get Channel
-
         Gets information about a channel given its ID. This includes guild channels, DM channels, and
         group DM channels.
       operationId: get_channel
@@ -54,8 +52,6 @@ paths:
       - channels
       summary: Delete Channel
       description: |-
-        Delete Channel
-
         Deletes a channel. For guild channels, you must have the `MANAGE_CHANNELS` permission to use
         this endpoint. For standard DM channels, you must be a recipient of the DM. For group DM
         channels, you must be the owner of the group DM.
@@ -96,8 +92,6 @@ paths:
       - channels
       summary: Edit Channel
       description: |-
-        Edit Channel
-
         Edits a channel with the given payload.
         For guild channels, you must have the `MODIFY_CHANNELS` permission to use this endpoint.
       operationId: edit_channel
@@ -148,14 +142,59 @@ paths:
                 $ref: '#/components/schemas/Error'
       security:
       - token: []
+  /channels/{channel_id}/ack/{message_id}:
+    put:
+      tags:
+      - channels
+      summary: Acknowledge Channel
+      description: |-
+        Acknowledges a channel up to the given message ID, marking the message and all messages before
+        it as read.
+      operationId: acknowledge_channel
+      parameters:
+      - name: channel_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: message_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      responses:
+        '204':
+          description: Channel acknowledged
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
   /channels/{channel_id}/messages:
     get:
       tags:
       - messages
       summary: Get Message History
       description: |-
-        Get Message History
-
         Fetches multiple messages from the channel's message history in bulk.
         If in a guild, you must have the `VIEW_MESSAGE_HISTORY` permission to use this endpoint.
       operationId: get_message_history
@@ -259,8 +298,6 @@ paths:
       - messages
       summary: Create Message
       description: |-
-        Create Message
-
         Sends a message in the given channel. You must have both the `VIEW_CHANNEL` and `SEND_MESSAGES`
         permissions in that channel if this message is being sent in a guild.
       operationId: create_message
@@ -311,8 +348,6 @@ paths:
       - messages
       summary: Get Message
       description: |-
-        Get Message
-
         Gets a message in the given channel with the given ID.
         If in a guild, you must have the `VIEW_MESSAGE_HISTORY` permission to use this endpoint.
       operationId: get_message
@@ -363,8 +398,6 @@ paths:
       - messages
       summary: Delete Message
       description: |-
-        Delete Message
-
         Deletes a message in the given channel. In a guild, you must have the `VIEW_CHANNEL` permission
         to delete your own messages, with addition to the `MANAGE_MESSAGES` permission if you want to
         delete messages sent by other members. If you have this permission, you are only able to delete
@@ -414,8 +447,6 @@ paths:
       - messages
       summary: Edit Message
       description: |-
-        Edit Message
-
         Edits a message in the given channel. You must have the `VIEW_CHANNEL` and `SEND_MESSAGES`
         permissions in that channel if the target message is in a guild.
       operationId: edit_message
@@ -473,8 +504,6 @@ paths:
       - messages
       summary: Pin Message
       description: |-
-        Pin Message
-
         Pins a message to its given channel. You must have the `PIN_MESSAGES` permission in the
         channel, or be in a DM-type channel. This endpoint is idempotent.
       operationId: pin_message
@@ -521,8 +550,6 @@ paths:
       - messages
       summary: Unpin Message
       description: |-
-        Unpin Message
-
         Unpins a message from its given channel. You must have the `PIN_MESSAGES` permission in the
         channel, or be in a DM-type channel. This endpoint is idempotent, so it may still return
         success even if the message wasn't originally pinned.
@@ -570,10 +597,7 @@ paths:
       tags:
       - guilds
       summary: Get All Guilds
-      description: |-
-        Get All Guilds
-
-        Fetches information for all guilds the user is a member of, abiding by the given query.
+      description: Fetches information for all guilds the user is a member of, abiding by the given query.
       operationId: get_all_guilds
       parameters:
       - name: channels
@@ -615,10 +639,7 @@ paths:
       tags:
       - guilds
       summary: Create Guild
-      description: |-
-        Create Guild
-
-        Creates a new guild with the given payload.
+      description: Creates a new guild with the given payload.
       operationId: create_guild
       requestBody:
         content:
@@ -647,8 +668,6 @@ paths:
       - guilds
       summary: Get Guild
       description: |-
-        Get Guild
-
         Fetches information for the guild with the given ID. You must be a member of the guild to fetch
         it.
       operationId: get_guild
@@ -691,10 +710,7 @@ paths:
       tags:
       - guilds
       summary: Delete Guild
-      description: |-
-        Delete Guild
-
-        Deletes the guild with the given ID. You must be the owner of the guild to delete it.
+      description: Deletes the guild with the given ID. You must be the owner of the guild to delete it.
       operationId: delete_guild
       parameters:
       - name: guild_id
@@ -740,8 +756,6 @@ paths:
       - guilds
       summary: Edit Guild
       description: |-
-        Edit Guild
-
         Modifies details of the guild with the given ID. You must have `MANAGE_GUILD` permissions to
         modify the guild. Returns the modified guild as a partial guild on success.
       operationId: edit_guild
@@ -797,10 +811,7 @@ paths:
       tags:
       - channels
       summary: Get Guild Channels
-      description: |-
-        Get Guild Channels
-
-        Returns a list of all channels in the guild.
+      description: Returns a list of all channels in the guild.
       operationId: get_guild_channels
       parameters:
       - name: guild_id
@@ -838,8 +849,6 @@ paths:
       - channels
       summary: Create Guild Channel
       description: |-
-        Create Guild Channel
-
         Creates a new channel in the guild with the given payload. You must have the `MANAGE_CHANNELS`
         permission to use this endpoint.
       operationId: create_guild_channel
@@ -896,8 +905,6 @@ paths:
       - invites
       summary: Get Guild Invites
       description: |-
-        Get Guild Invites
-
         Gets a list of invites for the given guild. You must have the `MANAGE_INVITES` permission for
         the guild to use this endpoint.
       operationId: get_guild_invites
@@ -943,8 +950,6 @@ paths:
       - invites
       summary: Create Invite to Guild
       description: |-
-        Create Invite to Guild
-
         Creates an invite that leads to the homepage of the given guild.
         You must have the `CREATE_INVITES` permission for the guild to use this endpoint.
       operationId: create_guild_invite
@@ -1001,8 +1006,6 @@ paths:
       - invites
       summary: Delete Invite
       description: |-
-        Delete Invite
-
         Deletes (revokes) an invite given its guild ID and code.
         You must have the `MANAGE_INVITES` permission for the guild to use this endpoint.
       operationId: delete_guild_invite
@@ -1047,10 +1050,7 @@ paths:
       tags:
       - members
       summary: Get All Members
-      description: |-
-        Get All Members
-
-        Gets information of all members in a guild. You must be a member of the guild.
+      description: Gets information of all members in a guild. You must be a member of the guild.
       operationId: get_members
       parameters:
       - name: guild_id
@@ -1095,8 +1095,6 @@ paths:
       - members
       summary: Get Authenticated User as Member
       description: |-
-        Get Authenticated User as Member
-
         Gets information of the authenticated user as a member of a guild. You must be a member of the
         guild.
       operationId: get_client_member
@@ -1140,8 +1138,6 @@ paths:
       - members
       summary: Leave Guild
       description: |-
-        Leave Guild
-
         Leaves a guild. You must be a member of the guild beforehand. If you are the owner of the guild,
         you must transfer ownership to another member before leaving.
       operationId: leave_guild
@@ -1181,8 +1177,6 @@ paths:
       - members
       summary: Edit Authenticated User as Member
       description: |-
-        Edit Authenticated User as Member
-
         Edits the authenticated user as a member of the given guild. You must be a member of the guild.
         Parts of the payload require different permissions:
         * The `nick` field requires the `CHANGE_NICKNAME` permission.
@@ -1233,10 +1227,7 @@ paths:
       tags:
       - members
       summary: Get Member
-      description: |-
-        Get Member
-
-        Gets information of a member in a guild. You must be a member of the guild.
+      description: Gets information of a member in a guild. You must be a member of the guild.
       operationId: get_member
       parameters:
       - name: guild_id
@@ -1285,8 +1276,6 @@ paths:
       - members
       summary: Kick Member
       description: |-
-        Kick Member
-
         Kicks a member from a guild. You must be a member of the guild and have the `KICK_MEMBERS`
         permission, and their highest role must be lower than yours.
       operationId: kick_member
@@ -1336,8 +1325,6 @@ paths:
       - members
       summary: Edit Member
       description: |-
-        Edit Member
-
         Edits information of a member in a guild. Parts of the payload require different permissions:
         * The `nick` field requires the `MANAGE_NICKNAMES` permission.
         * The `roles` field requires the `MANAGE_ROLES` permission.
@@ -1401,8 +1388,6 @@ paths:
       - roles
       summary: Get All Roles
       description: |-
-        Get All Roles
-
         Fetches information for all roles in the guild with the given ID.
         You must be a member of the guild.
       operationId: get_roles
@@ -1448,8 +1433,6 @@ paths:
       - roles
       summary: Create Role
       description: |-
-        Create Role
-
         Creates a role in the guild with the given guild ID. You must have the `MANAGE_ROLES` permission
         to create roles.
       operationId: create_role
@@ -1504,8 +1487,6 @@ paths:
       - roles
       summary: Get Role
       description: |-
-        Get Role
-
         Fetches information for the role with the given ID in the given guild. You must be a member of
         the guild the role belongs to.
       operationId: get_role
@@ -1556,8 +1537,6 @@ paths:
       - roles
       summary: Delete Role
       description: |-
-        Delete Role
-
         Deletes the role with the given ID in the given guild. You must have the `MANAGE_ROLES`
         permission, the role cannot be managed, and the role must be lower than your highest role.
       operationId: delete_role
@@ -1603,8 +1582,6 @@ paths:
       - roles
       summary: Edit Role
       description: |-
-        Edit Role
-
         Modifies the role with the given ID in the given guild. You must have the `MANAGE_ROLES`
         permission, and the role must be lower than your highest role.
       operationId: edit_role
@@ -1667,8 +1644,6 @@ paths:
       - invites
       summary: Get Invite
       description: |-
-        Get Invite
-
         Gets an invite by its code. This endpoint does not require authentication, but is rate limited
         by IP.
       operationId: get_invite
@@ -1696,8 +1671,6 @@ paths:
       - invites
       summary: Use Invite
       description: |-
-        Use Invite
-
         Joins a guild using an invite. If the guild was successfully joined, the created member object
         is returned. If the user is already in the guild, the existing member object is returned.
       operationId: use_invite
@@ -1746,10 +1719,7 @@ paths:
       tags:
       - auth
       summary: Generate Token (Login)
-      description: |-
-        Generate Token (Login)
-
-        Login to the API with your email and password to retrieve an authentication token.
+      description: Login to the API with your email and password to retrieve an authentication token.
       operationId: login
       requestBody:
         content:
@@ -1775,10 +1745,7 @@ paths:
       tags:
       - users
       summary: Get Relationships
-      description: |-
-        Get Relationships
-
-        Fetches all relationships of the authenticated user.
+      description: Fetches all relationships of the authenticated user.
       operationId: get_relationships
       responses:
         '200':
@@ -1802,10 +1769,7 @@ paths:
       tags:
       - users
       summary: Block User
-      description: |-
-        Block User
-
-        Blocks a user.
+      description: Blocks a user.
       operationId: block_user
       parameters:
       - name: target_id
@@ -1847,10 +1811,7 @@ paths:
       tags:
       - users
       summary: Send Friend Request
-      description: |-
-        Send Friend Request
-
-        Requests to add a user as a friend by their username and discriminator.
+      description: Requests to add a user as a friend by their username and discriminator.
       operationId: add_friend
       requestBody:
         content:
@@ -1896,10 +1857,7 @@ paths:
       tags:
       - users
       summary: Accept Friend Request
-      description: |-
-        Accept Friend Request
-
-        Accepts an incoming friend request.
+      description: Accepts an incoming friend request.
       operationId: accept_friend_request
       parameters:
       - name: target_id
@@ -1942,8 +1900,6 @@ paths:
       - users
       summary: Delete Relationship
       description: |-
-        Delete Relationship
-
         Deletes a relationship with a user. This includes:
         * Revoking outgoing friend requests
         * Declining incoming friend requests
@@ -1986,10 +1942,7 @@ paths:
       tags:
       - users
       summary: Create User
-      description: |-
-        Create User
-
-        Registers a new user account with the given payload.
+      description: Registers a new user account with the given payload.
       operationId: create_user
       requestBody:
         content:
@@ -2021,10 +1974,7 @@ paths:
       tags:
       - users
       summary: Check Username Availability
-      description: |-
-        Check Username Availability
-
-        Checks if a username is available.
+      description: Checks if a username is available.
       operationId: check_username
       parameters:
       - name: username
@@ -2052,10 +2002,7 @@ paths:
       tags:
       - users
       summary: Get Authenticated User
-      description: |-
-        Get Authenticated User
-
-        Fetches information about the logged in user.
+      description: Fetches information about the logged in user.
       operationId: get_client_user
       responses:
         '200':
@@ -2076,10 +2023,7 @@ paths:
       tags:
       - users
       summary: Delete User
-      description: |-
-        Delete User
-
-        Deletes the user account of the authenticated user. This is irreversible.
+      description: Deletes the user account of the authenticated user. This is irreversible.
       operationId: delete_user
       requestBody:
         content:
@@ -2108,10 +2052,7 @@ paths:
       tags:
       - users
       summary: Edit User
-      description: |-
-        Edit User
-
-        Modifies information about the logged in user.
+      description: Modifies information about the logged in user.
       operationId: edit_user
       requestBody:
         content:
@@ -2151,10 +2092,7 @@ paths:
       tags:
       - channels
       summary: Get DM Channels
-      description: |-
-        Get DM Channels
-
-        Fetches all DM and group DM channels that the current user is a part of.
+      description: Fetches all DM and group DM channels that the current user is a part of.
       operationId: get_dm_channels
       responses:
         '200':
@@ -2178,8 +2116,6 @@ paths:
       - channels
       summary: Open DM Channel / Create Group DM Channel
       description: |-
-        Open DM Channel / Create Group DM Channel
-
         Opens a DM channel with the given user, or creates a group DM channel with the given users.
 
         # For standard DM channels
@@ -2228,10 +2164,7 @@ paths:
       tags:
       - users
       summary: Get User
-      description: |-
-        Get User
-
-        Fetches information about a user by their ID.
+      description: Fetches information about a user by their ID.
       operationId: get_user
       parameters:
       - name: user_id
@@ -2323,6 +2256,7 @@ components:
       - announcement
       - voice
       - category
+      - merged
       - dm
       - group
     ClientUser:
@@ -2333,6 +2267,9 @@ components:
         - dm_privacy
         - group_dm_privacy
         - friend_request_privacy
+        - onboarding_flags
+        - settings
+        - notification_override
         properties:
           dm_privacy:
             $ref: '#/components/schemas/PrivacyConfiguration'
@@ -2348,6 +2285,15 @@ components:
             $ref: '#/components/schemas/PrivacyConfiguration'
           group_dm_privacy:
             $ref: '#/components/schemas/PrivacyConfiguration'
+          notification_override:
+            type: object
+            description: A map for notification settings override.
+            additionalProperties:
+              $ref: '#/components/schemas/NotificationFlags'
+          onboarding_flags:
+            $ref: '#/components/schemas/UserOnboardingFlags'
+          settings:
+            $ref: '#/components/schemas/Settings'
       description: |-
         Represents user info about the client. This has other information that is not available to the
         public, such as emails, guilds, and relationships (friends and blocked users).
@@ -2479,6 +2425,12 @@ components:
           name:
             type: string
             description: The name of the text channel.
+          nonce:
+            type: string
+            description: |-
+              A nonce to include with the channel. This is not stored and can be used to identify the
+              channel later on (it is relayed through the websocket).
+            nullable: true
           overwrites:
             type: array
             items:
@@ -2669,6 +2621,10 @@ components:
             format: int64
             description: The ID of the channel.
             minimum: 0
+          last_message:
+            allOf:
+            - $ref: '#/components/schemas/Message'
+            nullable: true
       description: Represents a direct-message-like channel that does not belong in a guild.
     DmChannelInfo:
       oneOf:
@@ -3227,6 +3183,25 @@ components:
             enum:
             - not_owner
       - type: object
+        description: You are not the author of the message you are trying to edit.
+        required:
+        - message_id
+        - message
+        - type
+        properties:
+          message:
+            type: string
+            description: The error message.
+          message_id:
+            type: integer
+            format: int64
+            description: The ID of the message you are trying to edit.
+            minimum: 0
+          type:
+            type: string
+            enum:
+            - not_message_author
+      - type: object
         description: You are too low in the role hierarchy to perform the requested action.
         required:
         - guild_id
@@ -3565,7 +3540,7 @@ components:
             format: int64
             description: |-
               The ID of the parent category of the channel. This is `None` if the channel is not in a
-              category.
+              category. This is also used for merged channels.
             nullable: true
             minimum: 0
           position:
@@ -3644,6 +3619,16 @@ components:
             type: string
             enum:
             - category
+      - allOf:
+        - $ref: '#/components/schemas/TextBasedGuildChannelInfo'
+        - type: object
+          required:
+          - type
+          properties:
+            type:
+              type: string
+              enum:
+              - merged
       description: Represents the type along with type-specific info of a guild channel.
       discriminator:
         propertyName: type
@@ -3861,6 +3846,7 @@ components:
         - attachments
         - flags
         - stars
+        - mentions
         properties:
           attachments:
             type: array
@@ -3888,6 +3874,13 @@ components:
             type: string
             description: The text content of this message.
             nullable: true
+          edited_at:
+            type: string
+            format: date-time
+            description: |-
+              The timestamp at which this message was last edited. This is `None` if the message has not
+              been edited.
+            nullable: true
           embeds:
             type: array
             items:
@@ -3900,12 +3893,19 @@ components:
             format: int64
             description: The snowflake ID of the message.
             minimum: 0
-          revision_id:
-            type: integer
-            format: int64
-            description: The revision ID of the message. This is `None` if this message is the current revision.
-            nullable: true
-            minimum: 0
+          mentions:
+            type: array
+            items:
+              type: integer
+              format: int64
+              minimum: 0
+            description: |-
+              A list of snowflake IDs of users and/or roles that this message mentions. If this message
+              also mentions everyone/here in a guild, then the guild ID is also included in this list.
+
+              Note: Users or roles will stay in this list even if they are deleted. This represents those
+              that were mentioned at the time the message was sent. That is, there is no guarantee that
+              all of these IDs will resolve to a user or role!
           stars:
             type: integer
             format: int32
@@ -4173,6 +4173,10 @@ components:
       - locked
       - slowmode
       properties:
+        last_message:
+          allOf:
+          - $ref: '#/components/schemas/MaybePartialMessage'
+          nullable: true
         locked:
           type: boolean
           description: |-
