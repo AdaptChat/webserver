@@ -121,8 +121,9 @@ pub async fn create_role(
     db.assert_member_has_permissions_with(guild_id, member_permissions, Permissions::MANAGE_ROLES)
         .await?;
 
-    if !payload.permissions.allow.contains(member_permissions)
-        || !payload.permissions.deny.contains(member_permissions)
+    if !member_permissions.contains(Permissions::ADMINISTRATOR)
+        && (!payload.permissions.allow.contains(member_permissions)
+            || !payload.permissions.deny.contains(member_permissions))
     {
         return Err(Response::from(Error::MissingPermissions {
             guild_id,
