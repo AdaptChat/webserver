@@ -121,6 +121,19 @@ pub async fn create_role(
     db.assert_member_has_permissions_with(guild_id, member_permissions, Permissions::MANAGE_ROLES)
         .await?;
 
+    if !db.is_guild_owner(guild_id, user_id).await? {
+        let (top_role_id, top_role_position) = db.fetch_top_role(guild_id, user_id).await?;
+        if payload.position > top_role_position {
+            return Err(Response::from(Error::RoleTooLow {
+                guild_id,
+                top_role_id,
+                top_role_position,
+                desired_position: top_role_position + 1,
+                message: String::from("You cannot create a role higher than your highest role"),
+            }));
+        }
+    }
+
     if !member_permissions.contains(Permissions::ADMINISTRATOR)
         && (!payload.permissions.allow.contains(member_permissions)
             || !payload.permissions.deny.contains(member_permissions))
