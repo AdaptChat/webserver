@@ -252,7 +252,7 @@ pub async fn edit_role_positions(
     Auth(user_id, _): Auth,
     Path(guild_id): Path<u64>,
     Json(role_ids): Json<Vec<u64>>,
-) -> RouteResult<()> {
+) -> NoContentResult {
     let mut db = get_pool();
     db.assert_member_has_permissions(guild_id, user_id, None, Permissions::MANAGE_ROLES)
         .await?;
@@ -265,7 +265,7 @@ pub async fn edit_role_positions(
     )
     .await?;
 
-    Ok(Response::ok(()))
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Delete Role

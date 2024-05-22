@@ -40,6 +40,7 @@ use essence::{
         roles::get_role,
         roles::create_role,
         roles::edit_role,
+        roles::edit_role_positions,
         roles::delete_role,
         members::get_client_member,
         members::get_member,
