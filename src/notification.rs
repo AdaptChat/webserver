@@ -25,23 +25,23 @@ pub struct Notification {
     pub link_to: Option<String>,
 }
 
-impl Into<FCMNotification> for Notification {
-    fn into(self) -> FCMNotification {
+impl From<Notification> for FCMNotification {
+    fn from(notif: Notification) -> Self {
         FCMNotification {
-            title: self.title,
-            body: self.body,
-            image: self.icon,
+            title: notif.title,
+            body: notif.body,
+            image: notif.icon,
         }
     }
 }
 
-impl Into<Message> for Notification {
-    fn into(self) -> Message {
-        let icon = self.icon.clone();
-        let link_to = self.link_to.clone();
+impl From<Notification> for Message {
+    fn from(notif: Notification) -> Self {
+        let icon = notif.icon.clone();
+        let link_to = notif.link_to.clone();
 
         Message {
-            notification: Some(self.into()),
+            notification: Some(notif.into()),
             android: Some(AndroidConfig {
                 priority: Some(AndroidMessagePriority::High),
                 ..Default::default()
