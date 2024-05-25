@@ -207,8 +207,19 @@ pub async fn edit_member(
         }
     }
 
-    let member = db.edit_member(guild_id, member_id, payload).await?;
-    Ok(Response::ok(member))
+    let (before, after) = db.edit_member(guild_id, member_id, payload).await?;
+
+    #[cfg(feature = "ws")]
+    amqp::publish_bulk_event(
+        guild_id,
+        OutboundMessage::MemberUpdate {
+            before,
+            after: after.clone(),
+        },
+    )
+    .await?;
+
+    Ok(Response::ok(after))
 }
 
 /// Kick Member
