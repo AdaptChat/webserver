@@ -187,21 +187,23 @@ pub async fn edit_member(
             .await?;
     }
 
-    if let Some(ref roles) = payload.roles {
-        db.assert_member_has_permissions_with(guild_id, perms, Permissions::MANAGE_ROLES)
-            .await?;
+    if !db.is_guild_owner(guild_id, user_id).await? {
+        if let Some(ref roles) = payload.roles {
+            db.assert_member_has_permissions_with(guild_id, perms, Permissions::MANAGE_ROLES)
+                .await?;
 
-        let (top_role_id, top_role_position) = db.fetch_top_role(guild_id, user_id).await?;
-        let target_position = db.fetch_highest_position_in(guild_id, roles).await?;
+            let (top_role_id, top_role_position) = db.fetch_top_role(guild_id, user_id).await?;
+            let target_position = db.fetch_highest_position_in(guild_id, roles).await?;
 
-        if target_position >= top_role_position {
-            return Err(Response::from(Error::RoleTooLow {
-                guild_id,
-                top_role_id,
-                top_role_position,
-                desired_position: target_position,
-                message: "You cannot assign roles higher than your top role".to_string(),
-            }));
+            if target_position >= top_role_position {
+                return Err(Response::from(Error::RoleTooLow {
+                    guild_id,
+                    top_role_id,
+                    top_role_position,
+                    desired_position: target_position,
+                    message: "You cannot assign roles higher than your top role".to_string(),
+                }));
+            }
         }
     }
 
