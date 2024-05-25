@@ -134,9 +134,8 @@ pub async fn create_role(
         }
     }
 
-    if !member_permissions.contains(Permissions::ADMINISTRATOR)
-        && (!payload.permissions.allow.contains(member_permissions)
-            || !payload.permissions.deny.contains(member_permissions))
+    if !member_permissions.contains(payload.permissions.allow)
+        || !member_permissions.contains(payload.permissions.deny)
     {
         return Err(Response::from(Error::MissingPermissions {
             guild_id,
@@ -199,9 +198,18 @@ pub async fn edit_role(
     db.assert_top_role_higher_than(guild_id, user_id, role_id)
         .await?;
 
+    let role = db
+        .fetch_role(guild_id, role_id)
+        .await?
+        .ok_or_not_found("role", "Role not found")?;
+
     if let Some(permissions) = payload.permissions {
-        if !permissions.allow.contains(member_permissions)
-            || !permissions.deny.contains(member_permissions)
+        if !member_permissions.contains(
+            permissions
+                .allow
+                .symmetric_difference(role.permissions.allow),
+        ) || !member_permissions
+            .contains(permissions.deny.symmetric_difference(role.permissions.deny))
         {
             return Err(Response::from(Error::MissingPermissions {
                 guild_id,
@@ -214,7 +222,7 @@ pub async fn edit_role(
         }
     }
 
-    let (before, after) = db.edit_role(guild_id, role_id, payload).await?;
+    let (before, after) = db.edit_role(guild_id, role, payload).await?;
 
     #[cfg(feature = "ws")]
     amqp::publish_bulk_event(
