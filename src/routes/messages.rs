@@ -195,6 +195,14 @@ pub async fn create_message(
     )
     .await?;
 
+    if payload.references.len() > 10 {
+        return Err(Error::InvalidField {
+            field: "references".to_string(),
+            message: "Message can have at most 10 references".to_string(),
+        }
+        .into());
+    }
+
     let attachment = if let Some(mut multipart) = multipart {
         let field = multipart.next_field().await.multipart_into_err()?;
 
