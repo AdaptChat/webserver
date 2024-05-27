@@ -36,7 +36,7 @@ use essence::utoipa::OpenApi;
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tower_http::cors::CorsLayer;
-use utoipa_swagger_ui::SwaggerUi;
+use utoipa_scalar::{Scalar, Servable};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -81,7 +81,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .merge(routes::messages::router())
         .merge(routes::roles::router())
         .merge(routes::users::router())
-        .merge(SwaggerUi::new("/docs").url("/openapi.json", spec))
+        .merge(Scalar::with_url("/docs", spec))
         .layer(CorsLayer::permissive());
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8077));
