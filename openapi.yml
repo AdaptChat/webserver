@@ -1580,20 +1580,13 @@ paths:
     patch:
       tags:
       - roles
-      summary: Edit Role
+      summary: Edit Role Positions
       description: |-
-        Modifies the role with the given ID in the given guild. You must have the `MANAGE_ROLES`
-        permission, and the role must be lower than your highest role.
-      operationId: edit_role
+        Modifies the positions of all roles in the guild with the given ID. You must have the
+        ``MANAGE_ROLES`` permission.
+      operationId: edit_role_positions
       parameters:
       - name: guild_id
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-          minimum: 0
-      - name: role_id
         in: path
         required: true
         schema:
@@ -1604,15 +1597,21 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EditRolePayload'
+              type: array
+              items:
+                type: integer
+                format: int64
+                minimum: 0
         required: true
       responses:
         '200':
-          description: Modified role object
+          description: Modified role positions
+        '400':
+          description: "Invalid list of role IDs. Your array must contain all roles in the guild exactly\n                once, including roles above your top role but excluding the default role.\n            "
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Role'
+                $ref: '#/components/schemas/Error'
         '401':
           description: Invalid token
           content:
@@ -1620,12 +1619,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: |
-            You are forbidden from editing the role. This can be because:
-            * You are not a member of the guild.
-            * You do not have the `MANAGE_ROLES` permission in the guild.
-            * You are editing a role that allows or denies permissions you do not have.
-            * You are editing a role that is higher than your highest role.
+          description: "You are forbidden from reordering roles. This can be because:\n* You are not a member of the guild.\n* You do not have the `MANAGE_ROLES` permission in the guild.\n* A role higher than or equal to your top role had its position changed.\n            "
           content:
             application/json:
               schema:
@@ -2521,6 +2515,11 @@ components:
             A nonce to include with the message. This is not stored and can be used to identify the
             message later on (it is relayed through the websocket).
           nullable: true
+        references:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageReference'
+          description: Message(s) that this message replies to.
     CreateRolePayload:
       type: object
       description: Payload sent to create a new role in a guild.
@@ -2544,6 +2543,13 @@ components:
           description: The name of the role.
         permissions:
           $ref: '#/components/schemas/PermissionPair'
+        position:
+          type: integer
+          format: int32
+          description: |-
+            The position the role should be in. Must be at least (and defaults to) ``1`` and at most
+            the position of your top role (unless you are owner).
+          minimum: 0
     CreateUserPayload:
       type: object
       description: Payload sent to create a new user.
@@ -3787,6 +3793,19 @@ components:
       - invalid_utf8
       - invalid_json
       - invalid_multipart
+    MaybePartialMessage:
+      oneOf:
+      - $ref: '#/components/schemas/Message'
+      - type: object
+        description: Just the ID of the message.
+        required:
+        - id
+        properties:
+          id:
+            type: integer
+            format: int64
+            minimum: 0
+      description: Either a fully resolved message or just its ID.
     MaybePartialUser:
       oneOf:
       - $ref: '#/components/schemas/User'
@@ -3847,6 +3866,7 @@ components:
         - flags
         - stars
         - mentions
+        - references
         properties:
           attachments:
             type: array
@@ -3906,6 +3926,11 @@ components:
               Note: Users or roles will stay in this list even if they are deleted. This represents those
               that were mentioned at the time the message was sent. That is, there is no guarantee that
               all of these IDs will resolve to a user or role!
+          references:
+            type: array
+            items:
+              $ref: '#/components/schemas/MessageReference'
+            description: A list of messages that this message references.
           stars:
             type: integer
             format: int32
@@ -4002,6 +4027,35 @@ components:
       description: Represents the type and info of a message.
       discriminator:
         propertyName: type
+    MessageReference:
+      type: object
+      description: Represents partial message data about a referenced message.
+      required:
+      - message_id
+      - channel_id
+      properties:
+        channel_id:
+          type: integer
+          format: int64
+          description: The ID of the channel the referenced message is in.
+          minimum: 0
+        guild_id:
+          type: integer
+          format: int64
+          description: The ID of the guild the referenced message is in, if any.
+          nullable: true
+          minimum: 0
+        mention_author:
+          type: boolean
+          description: Whether to mention the author of the referenced message.
+        message_id:
+          type: integer
+          format: int64
+          description: The ID this message is referencing.
+          minimum: 0
+    NotificationFlags:
+      type: integer
+      format: int32
     PartialGuild:
       type: object
       description: Represents a guild with partial information, sometimes referred to as a server.
@@ -4071,7 +4125,7 @@ components:
       description: |-
         Represents a pair of permissions, one representing allowed permissions and the other
         representing denied permissions. This is so that any permission that is represented as
-        "neutral" where it is neither allowed or denied remains easily overwritten by lower
+        "neutral" where it is neither allowed/denied remains easily overwritten by lower
         roles or members.
       required:
       - allow
@@ -4165,6 +4219,9 @@ components:
         username:
           type: string
           description: The username of the user to add as a friend.
+    Settings:
+      type: integer
+      format: int32
     TextBasedGuildChannelInfo:
       type: object
       description: Represents common information found in text-based guild channels.
@@ -4251,6 +4308,9 @@ components:
       - dm
       - group_dm
       - friend_request
+    UserOnboardingFlags:
+      type: integer
+      format: int64
   securitySchemes:
     token:
       type: apiKey
