@@ -511,6 +511,9 @@ pub async fn stop_typing(Auth(user_id, _): Auth, Path(channel_id): Path<u64>) ->
 ///
 /// Acknowledges a channel up to the given message ID, marking the message and all messages before
 /// it as read.
+/// 
+/// Note that a message with the given ID does not have to actually exist; to mark a specific 
+/// message as unread you can pass ``message_id - 1`` to this endpoint instead.
 #[utoipa::path(
     put,
     path = "/channels/{channel_id}/ack/{message_id}",
@@ -548,11 +551,6 @@ pub async fn acknowledge_channel(
     } else {
         db.assert_user_is_recipient(channel_id, user_id).await?;
     }
-
-    // assert that this message actually exists
-    db.fetch_message(channel_id, message_id)
-        .await?
-        .ok_or_not_found("message", format!("Message with ID {message_id} not found"))?;
 
     db.ack(user_id, channel_id, message_id).await?;
 
