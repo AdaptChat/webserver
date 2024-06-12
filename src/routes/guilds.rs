@@ -1,5 +1,6 @@
 #[cfg(feature = "ws")]
 use crate::amqp::prelude::*;
+use crate::cdn::{upload_banner, upload_icon};
 use crate::{
     extract::{Auth, Json},
     ratelimit::ratelimit,
@@ -67,14 +68,20 @@ pub async fn create_guild(
         validate_guild_description(desc)?;
     }
 
-    let db = get_pool();
-    let mut transaction = db.begin().await?;
-
     let guild_id = generate_snowflake(ModelType::Guild, 0);
     let channel_id = with_model_type(guild_id, ModelType::Channel);
     let role_id = with_model_type(guild_id, ModelType::Role);
-
     let nonce = payload.nonce.take();
+
+    if let Some(ref mut icon) = payload.icon {
+        *icon = upload_icon(guild_id, icon).await?;
+    }
+    if let Some(ref mut banner) = payload.banner {
+        *banner = upload_banner(guild_id, banner).await?;
+    }
+
+    let db = get_pool();
+    let mut transaction = db.begin().await?;
     let guild = transaction
         .create_guild(guild_id, channel_id, role_id, owner_id, payload)
         .await?;
@@ -171,7 +178,7 @@ pub async fn get_guild(
 pub async fn edit_guild(
     Auth(user_id, _): Auth,
     Path(guild_id): Path<u64>,
-    Json(payload): Json<EditGuildPayload>,
+    Json(mut payload): Json<EditGuildPayload>,
 ) -> RouteResult<PartialGuild> {
     if let Some(ref name) = payload.name {
         validate_guild_name(name)?;
@@ -184,6 +191,12 @@ pub async fn edit_guild(
     db.assert_member_has_permissions(guild_id, user_id, None, Permissions::MANAGE_GUILD)
         .await?;
 
+    if let Maybe::Value(ref mut icon) = payload.icon {
+        *icon = upload_icon(guild_id, icon).await?;
+    }
+    if let Maybe::Value(ref mut banner) = payload.banner {
+        *banner = upload_banner(guild_id, banner).await?;
+    }
     let (before, after) = db.edit_guild(guild_id, payload).await?;
 
     #[cfg(feature = "ws")]

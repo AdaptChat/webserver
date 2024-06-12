@@ -1,6 +1,7 @@
 #[cfg(feature = "ws")]
 use crate::amqp::prelude::*;
 use crate::{
+    cdn,
     extract::{Auth, Json},
     ratelimit::ratelimit,
     routes::{NoContentResult, RouteResult},
@@ -15,7 +16,7 @@ use axum::{
 };
 use essence::{
     cache::ChannelInspection,
-    db::{get_pool, ChannelDbExt, GuildDbExt, MessageDbExt, UserDbExt},
+    db::{get_pool, ChannelDbExt, GuildDbExt, UserDbExt},
     error::UserInteractionType,
     http::channel::{
         CreateDmChannelPayload, CreateGuildChannelInfo, CreateGuildChannelPayload,
@@ -307,7 +308,7 @@ pub async fn get_channel(
 pub async fn edit_channel(
     Auth(user_id, _): Auth,
     Path(channel_id): Path<u64>,
-    Json(payload): Json<EditChannelPayload>,
+    Json(mut payload): Json<EditChannelPayload>,
 ) -> RouteResult<Channel> {
     if let Some(ref name) = payload.name {
         validate_channel_name(name)?;
@@ -338,6 +339,9 @@ pub async fn edit_channel(
         db.assert_user_is_recipient(channel_id, user_id).await?;
     }
 
+    if let Maybe::Value(ref mut icon) = payload.icon {
+        *icon = cdn::upload_icon(channel_id, icon).await?;
+    }
     let (before, channel) = db.edit_channel(channel_id, payload).await?;
 
     #[cfg(feature = "ws")]
@@ -511,8 +515,8 @@ pub async fn stop_typing(Auth(user_id, _): Auth, Path(channel_id): Path<u64>) ->
 ///
 /// Acknowledges a channel up to the given message ID, marking the message and all messages before
 /// it as read.
-/// 
-/// Note that a message with the given ID does not have to actually exist; to mark a specific 
+///
+/// Note that a message with the given ID does not have to actually exist; to mark a specific
 /// message as unread you can pass ``message_id - 1`` to this endpoint instead.
 #[utoipa::path(
     put,

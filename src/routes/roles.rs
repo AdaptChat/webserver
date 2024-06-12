@@ -1,5 +1,6 @@
 #[cfg(feature = "ws")]
 use crate::amqp::prelude::*;
+use crate::cdn::upload_icon;
 use crate::{
     extract::{Auth, Json},
     ratelimit::ratelimit,
@@ -14,7 +15,7 @@ use essence::{
     snowflake::generate_snowflake,
     utoipa,
     ws::OutboundMessage,
-    Error, NotFoundExt,
+    Error, Maybe, NotFoundExt,
 };
 
 fn validate_role_name(name: &str) -> Result<(), Error> {
@@ -112,7 +113,7 @@ pub async fn get_role(
 pub async fn create_role(
     Auth(user_id, _): Auth,
     Path(guild_id): Path<u64>,
-    Json(payload): Json<CreateRolePayload>,
+    Json(mut payload): Json<CreateRolePayload>,
 ) -> RouteResult<Role> {
     validate_role_name(&payload.name)?;
     let mut db = get_pool();
@@ -148,6 +149,9 @@ pub async fn create_role(
     }
 
     let role_id = generate_snowflake(ModelType::Role, 0); // TODO: node id
+    if let Some(ref mut icon) = payload.icon {
+        *icon = upload_icon(role_id, icon).await?;
+    }
     let role = db.create_role(guild_id, role_id, payload).await?;
 
     #[cfg(feature = "ws")]
@@ -185,7 +189,7 @@ pub async fn create_role(
 pub async fn edit_role(
     Auth(user_id, _): Auth,
     Path((guild_id, role_id)): Path<(u64, u64)>,
-    Json(payload): Json<EditRolePayload>,
+    Json(mut payload): Json<EditRolePayload>,
 ) -> RouteResult<Role> {
     if let Some(ref name) = payload.name {
         validate_role_name(name)?;
@@ -222,6 +226,9 @@ pub async fn edit_role(
         }
     }
 
+    if let Maybe::Value(ref mut icon) = payload.icon {
+        *icon = upload_icon(role_id, icon).await?;
+    }
     let (before, after) = db.edit_role(guild_id, role, payload).await?;
 
     #[cfg(feature = "ws")]

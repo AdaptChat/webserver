@@ -8,6 +8,7 @@ use serde::{de::DeserializeOwned, Deserialize};
 use std::sync::OnceLock;
 use uuid::Uuid;
 
+const MB: usize = 1_048_576;
 const CDN_URL: &str = dotenv!("CDN_URL", "missing CDN_URL environment variable");
 const CDN_AUTHORIZATION: &str = dotenv!(
     "CDN_AUTHORIZATION",
@@ -24,18 +25,12 @@ struct CdnAttachmentUploadResponse {
 }
 
 #[derive(Deserialize)]
-struct CdnAvatarUploadResponse {
-    path: String,
-}
-
-#[derive(Deserialize)]
-struct CdnEmojiUploadResponse {
+struct CdnAssetUploadResponse {
     path: String,
 }
 
 impl CdnResponse for CdnAttachmentUploadResponse {}
-impl CdnResponse for CdnAvatarUploadResponse {}
-impl CdnResponse for CdnEmojiUploadResponse {}
+impl CdnResponse for CdnAssetUploadResponse {}
 
 fn humanize_size(mut len: usize) -> String {
     const SIZES: [&str; 6] = ["B", "kB", "MB", "GB", "TB", "PB"];
@@ -158,36 +153,54 @@ async fn upload<T: CdnResponse>(
     })
 }
 
-/// Uploads a user avatar to the CDN and returns its URL.
-pub async fn upload_user_avatar(user_id: u64, image_data: &str) -> essence::Result<String> {
-    let (bytes, ext) = data_scheme_to_bytes(Some("avatar"), image_data, true, 4_000_000)?;
+macro_rules! define_upload_fn {
+    (
+        $(#[$doc:meta])*
+        $fn:ident,
+        $field:expr, $accept_gifs:literal, $max_size:expr, $segment:literal, $prefix:literal
+    ) => {
+        $(#[$doc])*
+        pub async fn $fn(id: u64, image_data: &str) -> essence::Result<String> {
+            let (bytes, ext) = data_scheme_to_bytes($field, image_data, $accept_gifs, $max_size)?;
 
-    let url = upload::<CdnAvatarUploadResponse>(
-        &format!("/avatars/{user_id}"),
-        bytes,
-        format!("avatar.{ext}"),
-    )
-    .await?
-    .path;
+            let url = upload::<CdnAssetUploadResponse>(
+                &format!("/{}/{id}", $segment),
+                bytes,
+                format!("{}.{ext}", $prefix),
+            )
+            .await?
+            .path;
 
-    Ok([CDN_URL, &url].concat())
+            Ok([CDN_URL, &url].concat())
+        }
+    };
 }
 
-pub async fn upload_custom_emoji(emoji_id: u64, image_data: &str) -> essence::Result<String> {
-    let (bytes, ext) = data_scheme_to_bytes(Some("image"), image_data, true, 512_000)?;
+define_upload_fn!(
+    /// Uploads a user avatar to the CDN and returns its URL.
+    upload_user_avatar,
+    Some("avatar"), true, MB * 4, "avatars", "avatar"
+);
 
-    let url = upload::<CdnEmojiUploadResponse>(
-        &format!("/emojis/{emoji_id}"),
-        bytes,
-        format!("emoji.{ext}"),
-    )
-    .await?
-    .path;
+define_upload_fn!(
+    /// Uploads a user-curated icon (e.g. guild, channel, role) to the CDN and returns its URL.
+    upload_icon,
+    Some("icon"), true, MB, "icons", "icon"
+);
 
-    Ok([CDN_URL, &url].concat())
-}
+define_upload_fn!(
+    /// Uploads a user-curated banner (e.g. user profile, guild) to the CDN and returns its URL.
+    upload_banner,
+    Some("banner"), false, MB * 4, "banners", "banner"
+);
 
-/// Uploads an attachment to the CDN and returns the id.
+define_upload_fn!(
+    /// Uploads a custom emoji to the CDN and returns its URL.
+    upload_custom_emoji,
+    Some("image"), true, MB / 2, "emojis", "emoji"
+);
+
+/// Uploads an attachment to the CDN and returns its UUID.
 pub async fn upload_attachment(filename: String, bytes: Vec<u8>) -> essence::Result<Uuid> {
     upload::<CdnAttachmentUploadResponse>("/attachments", bytes, filename)
         .await
