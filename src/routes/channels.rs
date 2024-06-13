@@ -14,6 +14,9 @@ use axum::{
     routing::{get, put},
     Router,
 };
+use essence::db::RoleDbExt;
+use essence::models::PermissionOverwrite;
+use essence::snowflake::SnowflakeReader;
 use essence::{
     cache::ChannelInspection,
     db::{get_pool, ChannelDbExt, GuildDbExt, UserDbExt},
@@ -188,6 +191,80 @@ pub async fn get_guild_channels(
     Ok(Response::ok(channels))
 }
 
+async fn validate_overwrites(
+    user_id: u64,
+    guild_id: u64,
+    channel_id: Option<u64>,
+    overwrites: &[PermissionOverwrite],
+) -> essence::Result<()> {
+    if overwrites.len() > 200 {
+        return Err(Error::InvalidField {
+            field: "overwrites".to_string(),
+            message: "A channel cannot have more than 200 permission overwrites".to_string(),
+        });
+    }
+
+    let db = get_pool();
+    let permissions = db
+        .fetch_member_permissions(guild_id, user_id, channel_id)
+        .await?;
+
+    if db.is_guild_owner(guild_id, user_id).await? {
+        return Ok(());
+    }
+
+    let (top_role_id, top_position) = db.fetch_top_role(guild_id, user_id).await?;
+    for overwrite in overwrites {
+        if !permissions.contains(overwrite.permissions.allow)
+            || !permissions.contains(overwrite.permissions.deny)
+        {
+            return Err(Error::MissingPermissions {
+                guild_id,
+                permissions: overwrite.permissions.allow | overwrite.permissions.deny,
+                message: String::from("Cannot create overwrite with permissions you do not have"),
+            });
+        }
+        match SnowflakeReader::new(overwrite.id).model_type() {
+            // if role, assert role is managable by user
+            ModelType::Role => {
+                let position = db.assert_role_exists(guild_id, overwrite.id).await?;
+                if position >= top_position {
+                    return Err(Error::RoleTooLow {
+                        guild_id,
+                        top_role_id,
+                        top_role_position: top_position,
+                        desired_position: position,
+                        message: String::from(
+                            "Cannot create overwrite for a role higher than your top role",
+                        ),
+                    });
+                }
+            }
+            // if member, assert member is managable by user
+            ModelType::User => {
+                let (_, position) = db.fetch_top_role(guild_id, overwrite.id).await?;
+                if position >= top_position {
+                    return Err(Error::RoleTooLow {
+                        guild_id,
+                        top_role_id,
+                        top_role_position: top_position,
+                        desired_position: position,
+                        message: String::from("Cannot create overwrite for a user with a role higher than your top role"),
+                    });
+                }
+            }
+            _ => {
+                return Err(Error::InvalidField {
+                    field: "id".to_string(),
+                    message: "Invalid ID for permission overwrite".to_string(),
+                })
+            }
+        }
+    }
+
+    Ok(())
+}
+
 /// Create Guild Channel
 ///
 /// Creates a new channel in the guild with the given payload. You must have the `MANAGE_CHANNELS`
@@ -234,6 +311,10 @@ pub async fn create_guild_channel(
         Permissions::MANAGE_CHANNELS,
     )
     .await?;
+
+    if let Some(overwrites) = &payload.overwrites {
+        validate_overwrites(user_id, guild_id, None, overwrites).await?;
+    }
 
     #[cfg(feature = "ws")]
     let nonce = payload.nonce.take();
@@ -335,6 +416,23 @@ pub async fn edit_channel(
             Permissions::MODIFY_CHANNELS,
         )
         .await?;
+
+        if let Some(overwrites) = &payload.overwrites {
+            let old = db.fetch_channel_overwrites(channel_id).await?;
+            let difference: Vec<_> = overwrites
+                .iter()
+                .map(|new| {
+                    let mut new = new.clone();
+                    if let Some(old) = old.iter().find(|old| old.id == new.id) {
+                        new.permissions.allow ^= old.permissions.allow;
+                        new.permissions.deny ^= old.permissions.deny;
+                    }
+                    new
+                })
+                .collect();
+
+            validate_overwrites(user_id, guild_id.unwrap(), Some(channel_id), &difference).await?;
+        }
     } else {
         db.assert_user_is_recipient(channel_id, user_id).await?;
     }

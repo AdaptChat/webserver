@@ -27,7 +27,7 @@ pub struct Notification {
 
 impl From<Notification> for FCMNotification {
     fn from(notif: Notification) -> Self {
-        FCMNotification {
+        Self {
             title: notif.title,
             body: notif.body,
             image: notif.icon,
@@ -40,7 +40,7 @@ impl From<Notification> for Message {
         let icon = notif.icon.clone();
         let link_to = notif.link_to.clone();
 
-        Message {
+        Self {
             notification: Some(notif.into()),
             android: Some(AndroidConfig {
                 priority: Some(AndroidMessagePriority::High),
