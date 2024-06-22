@@ -16,6 +16,8 @@ use axum::{
     routing::{delete, get, post, put},
     Router,
 };
+use essence::http::user::{CreateBotPayload, CreateBotResponse};
+use essence::models::BotFlags;
 use essence::{
     auth::generate_token,
     db::{get_pool, AuthDbExt, UserDbExt},
@@ -230,7 +232,7 @@ pub async fn create_user(
 
 /// Get Authenticated User
 ///
-/// Fetches information about the logged in user.
+/// Fetches information about the logged-in user.
 #[utoipa::path(
     get,
     path = "/users/me",
@@ -310,7 +312,7 @@ pub async fn edit_user(
     path = "/users/me",
     request_body = DeleteUserPayload,
     responses(
-        (status = NO_CONTENT, description = "User was successfully d4eleted"),
+        (status = NO_CONTENT, description = "User was successfully deleted"),
         (status = UNAUTHORIZED, description = "Invalid token/credentials", body = Error),
         (status = BAD_REQUEST, description = "Invalid payload", body = Error),
     ),
@@ -642,9 +644,68 @@ async fn add_registration_key(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Create Bot
+///
+/// Registers a new bot account with the given payload.
+#[utoipa::path(
+    post,
+    path = "/bots",
+    request_body = CreateBotPayload,
+    responses(
+        (status = CREATED, description = "Bot ID and token", body = CreateBotResponse),
+        (status = BAD_REQUEST, description = "Invalid payload", body = Error),
+        (status = CONFLICT, description = "Username is already taken", body = Error),
+    ),
+    security(("token" = [])),
+)]
+async fn create_bot(
+    Auth(user_id, flags): Auth,
+    Json(payload): Json<CreateBotPayload>,
+) -> RouteResult<CreateBotResponse> {
+    if flags.contains(UserFlags::BOT) {
+        return Err(Response::from(Error::UnsupportedAuthMethod {
+            message: String::from(
+                "This user is a bot account, but this endpoint can only be used by user accounts.",
+            ),
+        }));
+    }
+
+    let db = get_pool();
+    let qualified_name = format!("{user_id}/{}", payload.username);
+    if db.is_username_taken(&qualified_name).await? {
+        return Err(Response::from(Error::AlreadyTaken {
+            what: "username".to_string(),
+            message: "Username is already taken".to_string(),
+        }));
+    }
+
+    let mut transaction = db.begin().await?;
+
+    let id = generate_snowflake(ModelType::User, 0);
+    let mut bot_flags = BotFlags::empty();
+    if !payload.public {
+        bot_flags.insert(BotFlags::PUBLIC);
+    }
+    let bot = transaction
+        .create_bot(
+            id,
+            user_id,
+            &qualified_name,
+            payload.display_name.as_deref(),
+            bot_flags,
+        )
+        .await?;
+
+    let token = generate_token(id);
+    transaction.create_token(id, &token).await?;
+    transaction.commit().await?;
+
+    Ok(Response::created(CreateBotResponse { bot, token }))
+}
+
 pub fn router() -> Router {
     Router::new()
-        .route("/users", post(create_user.layer(ratelimit!(3, 15))))
+        .route("/users", post(create_user.layer(ratelimit!(2, 300))))
         .route(
             "/users/check/:username",
             get(check_username.layer(ratelimit!(5, 5))),
@@ -680,4 +741,5 @@ pub fn router() -> Router {
             "/relationships/:target_id",
             delete(delete_relationship.layer(ratelimit!(5, 5))),
         )
+        .route("/bots", post(create_bot.layer(ratelimit!(2, 120))))
 }

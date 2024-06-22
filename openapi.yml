@@ -150,6 +150,9 @@ paths:
       description: |-
         Acknowledges a channel up to the given message ID, marking the message and all messages before
         it as read.
+
+        Note that a message with the given ID does not have to actually exist; to mark a specific
+        message as unread you can pass ``message_id - 1`` to this endpoint instead.
       operationId: acknowledge_channel
       parameters:
       - name: channel_id
@@ -1996,7 +1999,7 @@ paths:
       tags:
       - users
       summary: Get Authenticated User
-      description: Fetches information about the logged in user.
+      description: Fetches information about the logged-in user.
       operationId: get_client_user
       responses:
         '200':
@@ -2027,7 +2030,7 @@ paths:
         required: true
       responses:
         '204':
-          description: User was successfully d4eleted
+          description: User was successfully deleted
         '400':
           description: Invalid payload
           content:
@@ -2339,12 +2342,6 @@ components:
         required:
         - type
         properties:
-          icon:
-            type: string
-            description: |-
-              The icon of the channel represented as a
-              [Data URI scheme](https://en.wikipedia.org/wiki/Data_URI_scheme), if any.
-            nullable: true
           topic:
             type: string
             description: The topic of the text channel, if any.
@@ -2358,12 +2355,6 @@ components:
         required:
         - type
         properties:
-          icon:
-            type: string
-            description: |-
-              The icon of the channel represented as a
-              [Data URI scheme](https://en.wikipedia.org/wiki/Data_URI_scheme), if any.
-            nullable: true
           topic:
             type: string
             description: The topic of the text channel, if any.
@@ -2377,12 +2368,6 @@ components:
         required:
         - type
         properties:
-          icon:
-            type: string
-            description: |-
-              The icon of the channel represented as a
-              [Data URI scheme](https://en.wikipedia.org/wiki/Data_URI_scheme), if any.
-            nullable: true
           type:
             type: string
             enum:
@@ -2412,9 +2397,15 @@ components:
         required:
         - name
         properties:
+          color:
+            allOf:
+            - $ref: '#/components/schemas/ExtendedColor'
+            nullable: true
           icon:
             type: string
-            description: The icon of the text channel, if any.
+            description: |-
+              The icon of the channel represented as a
+              [Data URI scheme](https://en.wikipedia.org/wiki/Data_URI_scheme), if any.
             nullable: true
           name:
             type: string
@@ -2527,14 +2518,18 @@ components:
       - name
       properties:
         color:
-          type: integer
-          format: int32
-          description: The color of the role. Leave empty for the default/inherited color.
+          allOf:
+          - $ref: '#/components/schemas/ExtendedColor'
           nullable: true
-          minimum: 0
         hoisted:
           type: boolean
           description: Whether the role should be hoisted.
+        icon:
+          type: string
+          description: |-
+            The icon of the role represented as a
+            [Data URI scheme](https://en.wikipedia.org/wiki/Data_URI_scheme), if any.
+          nullable: true
         mentionable:
           type: boolean
           description: Whether the role should be mentionable by anyone.
@@ -2693,6 +2688,10 @@ components:
       type: object
       description: The request body sent to modify a channel.
       properties:
+        color:
+          allOf:
+          - $ref: '#/components/schemas/ExtendedColor'
+          nullable: true
         icon:
           type: string
           format: byte
@@ -2707,6 +2706,16 @@ components:
           description: |-
             The new name of the channel. If left blank, the name will not be changed. Takes effect for
             all channels except for user DMs.
+          nullable: true
+        overwrites:
+          type: array
+          items:
+            $ref: '#/components/schemas/PermissionOverwrite'
+          description: |-
+            The new permission overwrites to apply to the channel. If provided, this will completely
+            replace the existing overwrites. You may only create overwrites for manageable roles and
+            users. You may only modify/set permissions that you have. Only takes effect for guild
+            channels.
           nullable: true
         topic:
           type: string
@@ -2814,16 +2823,19 @@ components:
       description: Payload sent to edit a role.
       properties:
         color:
-          type: integer
-          format: int32
-          description: |-
-            The color of the role. Set to `null` for the default/inherited color, and leave empty
-            to leave it alone
+          allOf:
+          - $ref: '#/components/schemas/ExtendedColor'
           nullable: true
-          minimum: 0
         hoisted:
           type: boolean
           description: Whether the role should be hoisted.
+          nullable: true
+        icon:
+          type: string
+          format: byte
+          description: |-
+            The new icon of the role. Explicitly setting this to `None` will clear the icon.
+            This should be a [Data URI scheme](https://en.wikipedia.org/wiki/Data_URI_scheme).
           nullable: true
         mentionable:
           type: boolean
@@ -3523,11 +3535,19 @@ components:
         - position
         - overwrites
         properties:
+          color:
+            allOf:
+            - $ref: '#/components/schemas/ExtendedColor'
+            nullable: true
           guild_id:
             type: integer
             format: int64
             description: The ID of the guild that this channel is in.
             minimum: 0
+          icon:
+            type: string
+            description: The URL to the icon of the channel, if any.
+            nullable: true
           id:
             type: integer
             format: int64
@@ -4172,13 +4192,9 @@ components:
       - flags
       properties:
         color:
-          type: integer
-          format: int32
-          description: |-
-            The color of the role. This is an integer between 0 and 16777215, or ``None`` if the role
-            has no color (in which case it inherits the color).
+          allOf:
+          - $ref: '#/components/schemas/ExtendedColor'
           nullable: true
-          minimum: 0
         flags:
           $ref: '#/components/schemas/RoleFlags'
         guild_id:
@@ -4186,6 +4202,10 @@ components:
           format: int64
           description: The ID of the guild this role belongs to.
           minimum: 0
+        icon:
+          type: string
+          description: The URL of the role's icon, if any, displayed alongside member names in chat.
+          nullable: true
         id:
           type: integer
           format: int64
@@ -4232,7 +4252,7 @@ components:
       properties:
         last_message:
           allOf:
-          - $ref: '#/components/schemas/MaybePartialMessage'
+          - $ref: '#/components/schemas/Message'
           nullable: true
         locked:
           type: boolean
