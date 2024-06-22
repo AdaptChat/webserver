@@ -670,6 +670,11 @@ async fn create_bot(
         }));
     }
 
+    validate_username(&payload.username)?;
+    if let Some(ref display_name) = payload.display_name {
+        validate_display_name(display_name)?;
+    }
+
     let db = get_pool();
     let qualified_name = format!("{user_id}/{}", payload.username);
     if db.is_username_taken(&qualified_name).await? {
