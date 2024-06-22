@@ -688,7 +688,7 @@ async fn create_bot(
 
     let id = generate_snowflake(ModelType::User, 0);
     let mut bot_flags = BotFlags::empty();
-    if !payload.public {
+    if payload.public {
         bot_flags.insert(BotFlags::PUBLIC);
     }
     let bot = transaction
