@@ -1,10 +1,14 @@
-use crate::{extract::Json, ratelimit::ratelimit, routes::RouteResult, Response};
+use crate::{
+    extract::Json,
+    ratelimit::ratelimit,
+    routes::{assert_not_bot_account, RouteResult},
+    Response,
+};
 use axum::{handler::Handler, routing::post, Router};
 use essence::{
     auth::{generate_token, verify_password},
     db::{get_pool, AuthDbExt, UserDbExt},
     http::auth::{LoginRequest, LoginResponse, TokenRetrievalMethod},
-    models::UserFlags,
     utoipa, Error, NotFoundExt,
 };
 
@@ -34,11 +38,10 @@ pub async fn login(json: Json<LoginRequest>) -> RouteResult<LoginResponse> {
         .await?
         .ok_or_not_found("user", "user with the given email not found")?;
 
-    if user.flags.contains(UserFlags::BOT) {
-        return Err(Response::from(Error::UnsupportedAuthMethod {
-            message: "Bots cannot login with this method, use a bot token instead".to_string(),
-        }));
-    }
+    assert_not_bot_account(
+        user.flags,
+        "Bots cannot login with this method, use a bot token instead",
+    )?;
 
     if !verify_password(password, user.password.take().unwrap_or_default()).await? {
         return Err(Response::from(Error::InvalidCredentials {
@@ -62,7 +65,7 @@ pub async fn login(json: Json<LoginRequest>) -> RouteResult<LoginResponse> {
     }
 
     let token = generate_token(user.id);
-    transaction.create_token(user.id, &token).await?;
+    transaction.register_token(user.id, &token).await?;
     transaction.commit().await?;
 
     Ok(Response::ok(LoginResponse {

@@ -3,16 +3,23 @@ use crate::amqp::prelude::*;
 use crate::{
     extract::{Auth, Json},
     ratelimit::ratelimit,
-    routes::{NoContentResult, RouteResult},
+    routes::{assert_not_bot_account, NoContentResult, RouteResult},
     Response,
 };
-use axum::extract::Query;
-use axum::{extract::Path, handler::Handler, http::StatusCode, routing::get, Router};
-use essence::http::invite::UseInviteQuery;
+use axum::{
+    extract::{Path, Query},
+    handler::Handler,
+    http::StatusCode,
+    routing::get,
+    Router,
+};
 use essence::{
     db::{get_pool, GuildDbExt, InviteDbExt, MemberDbExt},
-    http::{guild::GetGuildQuery, invite::CreateInvitePayload},
-    models::{Invite, Member, Permissions, UserFlags},
+    http::{
+        guild::GetGuildQuery,
+        invite::{CreateInvitePayload, UseInviteQuery},
+    },
+    models::{Invite, Member, Permissions},
     utoipa, Error, NotFoundExt,
 };
 use rand::distributions::{Alphanumeric, DistString};
@@ -28,23 +35,17 @@ use rand::distributions::{Alphanumeric, DistString};
     responses(
         (status = CREATED, description = "Invite was successfully created", body = Invite),
         (status = UNAUTHORIZED, description = "Invalid token", body = Error),
-        (status = BAD_REQUEST, description = "Bot account or invalid payload", body = Error),
+        (status = BAD_REQUEST, description = "Invalid payload", body = Error),
         (status = FORBIDDEN, description = "Missing permissions", body = Error),
         (status = NOT_FOUND, description = "Guild not found", body = Error),
     ),
     security(("token" = [])),
 )]
 pub async fn create_guild_invite(
-    Auth(user_id, flags): Auth,
+    Auth(user_id, _): Auth,
     Path(guild_id): Path<u64>,
     Json(payload): Json<CreateInvitePayload>,
 ) -> RouteResult<Invite> {
-    if flags.contains(UserFlags::BOT) {
-        return Err(Response::from(Error::UnsupportedAuthMethod {
-            message: "Bots cannot create invites".to_string(),
-        }));
-    }
-
     let mut db = get_pool();
     db.assert_member_has_permissions(guild_id, user_id, None, Permissions::CREATE_INVITES)
         .await?;
@@ -154,11 +155,7 @@ pub async fn use_invite(
     Path(code): Path<String>,
     Query(query): Query<UseInviteQuery>,
 ) -> RouteResult<Member> {
-    if flags.contains(UserFlags::BOT) {
-        return Err(Response::from(Error::UnsupportedAuthMethod {
-            message: "Bots cannot use invites".to_string(),
-        }));
-    }
+    assert_not_bot_account(flags, "Bots cannot use invites")?;
 
     let mut db = get_pool();
     let (invite, member) = db.use_invite(user_id, code).await?;

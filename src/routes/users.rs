@@ -6,7 +6,7 @@ use crate::{
     cdn::{get_client, upload_user_avatar},
     extract::{Auth, Json},
     ratelimit,
-    routes::{NoContentResult, RouteResult},
+    routes::{assert_not_bot_account, NoContentResult, RouteResult},
     Response,
 };
 use axum::{
@@ -18,10 +18,14 @@ use axum::{
 };
 use essence::{
     auth::generate_token,
-    db::{get_pool, AuthDbExt, UserDbExt},
-    http::user::{
-        CreateBotPayload, CreateBotResponse, CreateUserPayload, CreateUserResponse,
-        DeleteUserPayload, EditBotPayload, EditUserPayload, SendFriendRequestPayload,
+    db::{get_pool, AuthDbExt, GuildDbExt, UserDbExt},
+    http::{
+        auth::LoginResponse,
+        user::{
+            CreateBotPayload, CreateBotResponse, CreateUserPayload, CreateUserResponse,
+            DeleteBotPayload, DeleteUserPayload, EditBotPayload, EditUserPayload,
+            RegenerateBotTokenPayload, SendFriendRequestPayload,
+        },
     },
     models::{
         Bot, BotFlags, ClientUser, ModelType, Relationship, RelationshipType, User, UserFlags,
@@ -224,7 +228,7 @@ pub async fn create_user(
         .await?;
 
     let token = generate_token(id);
-    transaction.create_token(id, &token).await?;
+    transaction.register_token(id, &token).await?;
     transaction.commit().await?;
 
     Ok(Response::created(CreateUserResponse { id, token }))
@@ -312,14 +316,11 @@ pub async fn edit_user(
     Auth(id, flags): Auth,
     Json(payload): Json<EditUserPayload>,
 ) -> RouteResult<User> {
-    if flags.contains(UserFlags::BOT) {
-        return Err(Response::from(Error::UnsupportedAuthMethod {
-            message: String::from(
-                "Bots cannot edit their own user information. The bot owner can access this \
-                function through the Edit Bot endpoint (PATCH /bots/:id).",
-            ),
-        }));
-    }
+    assert_not_bot_account(
+        flags,
+        "Bot accounts cannot edit user information. \
+        The bot owner can access this function through the Edit Bot endpoint (PATCH /bots/:id).",
+    )?;
 
     let mut db = get_pool();
     let after = _edit_user(&mut db, id, payload).await?;
@@ -344,17 +345,14 @@ pub async fn delete_user(
     Auth(id, flags): Auth,
     Json(payload): Json<DeleteUserPayload>,
 ) -> NoContentResult {
+    assert_not_bot_account(
+        flags,
+        "This user is a bot account, but this endpoint can only delete user accounts. \
+       To delete bot accounts, see the DELETE /bots/:id endpoint.",
+    )?;
+
     let DeleteUserPayload { password } = payload;
     let mut db = get_pool();
-
-    if flags.contains(UserFlags::BOT) {
-        return Err(Response::from(Error::UnsupportedAuthMethod {
-            message: String::from(
-                "This user is a bot account, but this endpoint can only delete user \
-                accounts. To delete bot accounts, see the DELETE /bots/:id endpoint.",
-            ),
-        }));
-    }
 
     if !db.verify_password(id, password).await? {
         return Err(Response::from(Error::InvalidCredentials {
@@ -457,13 +455,7 @@ pub async fn add_friend(
     Auth(user_id, flags): Auth,
     Json(payload): Json<SendFriendRequestPayload>,
 ) -> RouteResult<Relationship> {
-    if flags.contains(UserFlags::BOT) {
-        return Err(Response::from(Error::UnsupportedAuthMethod {
-            message: String::from(
-                "This user is a bot account, but this endpoint can only be used by user accounts.",
-            ),
-        }));
-    }
+    assert_not_bot_account(flags, "Bot accounts cannot send friend requests")?;
 
     let db = get_pool();
     let target = db
@@ -684,13 +676,7 @@ async fn create_bot(
     Auth(user_id, flags): Auth,
     Json(payload): Json<CreateBotPayload>,
 ) -> RouteResult<CreateBotResponse> {
-    if flags.contains(UserFlags::BOT) {
-        return Err(Response::from(Error::UnsupportedAuthMethod {
-            message: String::from(
-                "This user is a bot account, but this endpoint can only be used by user accounts.",
-            ),
-        }));
-    }
+    assert_not_bot_account(flags, "Bot accounts cannot create bots")?;
 
     validate_username(&payload.username)?;
     if let Some(ref display_name) = payload.display_name {
@@ -724,7 +710,7 @@ async fn create_bot(
         .await?;
 
     let token = generate_token(id);
-    transaction.create_token(id, &token).await?;
+    transaction.register_token(id, &token).await?;
     transaction.commit().await?;
 
     Ok(Response::created(CreateBotResponse { bot, token }))
@@ -764,14 +750,7 @@ pub async fn get_bot(_auth: Auth, Path(bot_id): Path<u64>) -> RouteResult<Bot> {
     security(("token" = [])),
 )]
 pub async fn get_bots(Auth(user_id, flags): Auth) -> RouteResult<Vec<Bot>> {
-    if flags.contains(UserFlags::BOT) {
-        return Err(Response::from(Error::UnsupportedAuthMethod {
-            message: String::from(
-                "Bots cannot own other bots; this endpoint can only be accessed by user accounts.",
-            ),
-        }));
-    }
-
+    assert_not_bot_account(flags, "Bot accounts cannot own other bots")?;
     let bots = get_pool().fetch_all_bots_by_user(user_id).await?;
     Ok(Response::ok(bots))
 }
@@ -796,14 +775,7 @@ pub async fn edit_bot(
     Path(bot_id): Path<u64>,
     Json(payload): Json<EditBotPayload>,
 ) -> RouteResult<Bot> {
-    if flags.contains(UserFlags::BOT) {
-        return Err(Response::from(Error::UnsupportedAuthMethod {
-            message: String::from(
-                "Bots cannot edit their own bot information; this endpoint must be called by \
-                the bot owner.",
-            ),
-        }));
-    }
+    assert_not_bot_account(flags, "Bots cannot edit their own bot information; this endpoint must be called by the bot owner.")?;
 
     let db = get_pool();
     db.assert_user_owns_bot(user_id, bot_id).await?;
@@ -816,13 +788,39 @@ pub async fn edit_bot(
     Ok(Response::ok(after))
 }
 
+async fn validate_optional_password<'t, D: AuthDbExt<'t> + GuildDbExt<'t> + Sync>(
+    db: &D,
+    guild_count_threshold: u64,
+    user_id: u64,
+    bot_id: u64,
+    password: Option<String>,
+    message: &'static str,
+) -> Result<(), Response<Error>> {
+    if db.fetch_guild_count(bot_id).await? > guild_count_threshold {
+        if let Some(p) = password {
+            if !db.verify_password(user_id, p.clone()).await? {
+                return Err(Response::from(Error::InvalidCredentials {
+                    what: "password".to_string(),
+                    message: "Invalid password".to_string(),
+                }));
+            }
+        } else {
+            return Err(Response::from(Error::MissingField {
+                field: "password".to_string(),
+                message: String::from(message),
+            }));
+        }
+    }
+    Ok(())
+}
+
 /// Delete Bot
 ///
-/// Deletes a bot account. Requires the bot owner's password.
+/// Deletes a bot account. Requires the bot owner's password if the bot is in over 20 guilds.
 #[utoipa::path(
     delete,
     path = "/bots/{bot_id}",
-    request_body = DeleteUserPayload,
+    request_body = Option<DeleteBotPayload>,
     responses(
         (status = NO_CONTENT, description = "Bot was successfully deleted"),
         (status = UNAUTHORIZED, description = "Invalid token/credentials", body = Error),
@@ -833,26 +831,25 @@ pub async fn edit_bot(
 pub async fn delete_bot(
     Auth(user_id, flags): Auth,
     Path(bot_id): Path<u64>,
-    Json(payload): Json<DeleteUserPayload>,
+    payload: Option<Json<DeleteBotPayload>>,
 ) -> NoContentResult {
-    if flags.contains(UserFlags::BOT) {
-        return Err(Response::from(Error::UnsupportedAuthMethod {
-            message: String::from(
-                "Bots cannot delete other bots; this endpoint can only be accessed by user accounts."
-            ),
-        }));
-    }
+    assert_not_bot_account(
+        flags,
+        "Bots cannot delete other bots; this endpoint can only be accessed by user accounts.",
+    )?;
 
     let db = get_pool();
     db.assert_user_owns_bot(user_id, bot_id).await?;
 
-    let DeleteUserPayload { password } = payload;
-    if !db.verify_password(bot_id, password).await? {
-        return Err(Response::from(Error::InvalidCredentials {
-            what: "password".to_string(),
-            message: "Invalid password".to_string(),
-        }));
-    }
+    validate_optional_password(
+        &db,
+        20,
+        user_id,
+        bot_id,
+        payload.map(|Json(DeleteBotPayload { password })| password),
+        "This bot is in over 20 guilds and requires a password to delete.",
+    )
+    .await?;
 
     let mut transaction = db.begin().await?;
     transaction.delete_user(bot_id).await?;
@@ -863,6 +860,56 @@ pub async fn delete_bot(
     amqp::publish_user_event(bot_id, OutboundMessage::UserDelete { user_id: bot_id }).await?;
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+/// Regenerate Bot Token
+///
+/// Regenerates a token for a bot you own. If the bot is in over 20 guilds, you must provide the bot
+/// owner's password.
+#[utoipa::path(
+    post,
+    path = "/bots/:bot_id/tokens",
+    request_body = Option<RegenerateBotTokenPayload>,
+    responses(
+        (status = OK, description = "Token regenerated", body = LoginResponse),
+        (status = UNAUTHORIZED, description = "Invalid token/credentials", body = Error),
+        (status = BAD_REQUEST, description = "Invalid payload", body = Error),
+    ),
+    security(("token" = [])),
+)]
+pub async fn regenerate_bot_token(
+    Auth(user_id, flags): Auth,
+    Path(bot_id): Path<u64>,
+    payload: Option<Json<RegenerateBotTokenPayload>>,
+) -> RouteResult<LoginResponse> {
+    assert_not_bot_account(
+        flags,
+        "Bots cannot regenerate their own tokens, this endpoint must be called by the bot owner.",
+    )?;
+
+    let db = get_pool();
+    db.assert_user_owns_bot(user_id, bot_id).await?;
+
+    validate_optional_password(
+        &db,
+        20,
+        user_id,
+        bot_id,
+        payload.map(|Json(RegenerateBotTokenPayload { password })| password),
+        "This bot is in over 20 guilds and requires a password to regenerate its token.",
+    )
+    .await?;
+
+    let mut transaction = db.begin().await?;
+    let token = generate_token(bot_id);
+    transaction.delete_all_tokens(bot_id).await?;
+    transaction.register_token(bot_id, &token).await?;
+    transaction.commit().await?;
+
+    Ok(Response::ok(LoginResponse {
+        user_id: bot_id,
+        token,
+    }))
 }
 
 pub fn router() -> Router {
@@ -912,5 +959,9 @@ pub fn router() -> Router {
             get(get_bot.layer(ratelimit!(3, 5)))
                 .patch(edit_bot.layer(ratelimit!(3, 15)))
                 .delete(delete_bot.layer(ratelimit!(2, 30))),
+        )
+        .route(
+            "/bots/:bot_id/tokens",
+            post(regenerate_bot_token.layer(ratelimit!(3, 300))),
         )
 }

@@ -66,6 +66,44 @@ paths:
                 $ref: '#/components/schemas/Error'
       security:
       - token: []
+  /bots/:bot_id/tokens:
+    post:
+      tags:
+      - users
+      summary: Regenerate Bot Token
+      description: |-
+        Regenerates a token for a bot you own. If the bot is in over 20 guilds, you must provide the bot
+        owner's password.
+      operationId: regenerate_bot_token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+              - $ref: '#/components/schemas/RegenerateBotTokenPayload'
+              nullable: true
+        required: false
+      responses:
+        '200':
+          description: Token regenerated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid token/credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
   /bots/{bot_id}:
     get:
       tags:
@@ -100,7 +138,7 @@ paths:
       tags:
       - users
       summary: Delete Bot
-      description: Deletes a bot account. Requires the bot owner's password.
+      description: Deletes a bot account. Requires the bot owner's password if the bot is in over 20 guilds.
       operationId: delete_bot
       parameters:
       - name: bot_id
@@ -114,8 +152,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DeleteUserPayload'
-        required: true
+              allOf:
+              - $ref: '#/components/schemas/DeleteBotPayload'
+              nullable: true
+        required: false
       responses:
         '204':
           description: Bot was successfully deleted
@@ -1149,7 +1189,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Invite'
         '400':
-          description: Bot account or invalid payload
+          description: Invalid payload
           content:
             application/json:
               schema:
@@ -2806,6 +2846,16 @@ components:
         token:
           type: string
           description: The token to use for authentication.
+    DeleteBotPayload:
+      type: object
+      description: Payload sent when deleting a bot.
+      required:
+      - password
+      properties:
+        password:
+          type: string
+          format: password
+          description: The password of the bot owner.
     DeleteGuildPayload:
       type: object
       description: The payload sent to delete a guild.
@@ -4490,6 +4540,16 @@ components:
     PrivacyConfiguration:
       type: integer
       format: int32
+    RegenerateBotTokenPayload:
+      type: object
+      description: Payload sent when regenerating a bot's token.
+      required:
+      - password
+      properties:
+        password:
+          type: string
+          format: password
+          description: The password of the bot owner.
     Relationship:
       type: object
       description: Represents a relationship that a user has with another user.
