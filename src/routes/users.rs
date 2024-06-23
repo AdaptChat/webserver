@@ -16,16 +16,16 @@ use axum::{
     routing::{delete, get, post, put},
     Router,
 };
-use essence::http::user::{CreateBotPayload, CreateBotResponse};
-use essence::models::BotFlags;
 use essence::{
     auth::generate_token,
     db::{get_pool, AuthDbExt, UserDbExt},
-    http::{
-        user::SendFriendRequestPayload,
-        user::{CreateUserPayload, CreateUserResponse, DeleteUserPayload, EditUserPayload},
+    http::user::{
+        CreateBotPayload, CreateBotResponse, CreateUserPayload, CreateUserResponse,
+        DeleteUserPayload, EditBotPayload, EditUserPayload, SendFriendRequestPayload,
     },
-    models::{ClientUser, ModelType, Relationship, RelationshipType, User, UserFlags},
+    models::{
+        Bot, BotFlags, ClientUser, ModelType, Relationship, RelationshipType, User, UserFlags,
+    },
     snowflake::generate_snowflake,
     utoipa, Error, Maybe, NotFoundExt,
 };
@@ -252,26 +252,14 @@ pub async fn get_client_user(Auth(id, _): Auth) -> RouteResult<ClientUser> {
     Ok(Response::ok(user))
 }
 
-/// Edit User
-///
-/// Modifies information about the logged in user.
-#[utoipa::path(
-    patch,
-    path = "/users/me",
-    request_body = EditUserPayload,
-    responses(
-        (status = OK, description = "User object after modification", body = User),
-        (status = BAD_REQUEST, description = "Invalid payload", body = Error),
-        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
-        (status = CONFLICT, description = "Username is already taken", body = Error),
-    ),
-    security(("token" = [])),
-)]
-pub async fn edit_user(
-    Auth(id, _): Auth,
-    Json(mut payload): Json<EditUserPayload>,
-) -> RouteResult<User> {
-    let mut db = get_pool();
+async fn _edit_user<'a, D>(
+    db: &mut D,
+    id: u64,
+    mut payload: EditUserPayload,
+) -> Result<User, Response<Error>>
+where
+    D: UserDbExt<'a> + Sync,
+{
     if let Some(ref username) = payload.username {
         validate_username(username)?;
 
@@ -291,6 +279,7 @@ pub async fn edit_user(
 
     let (before, after) = db.edit_user(id, payload).await?;
 
+    // TODO: this should publish to everyone who can see this user
     #[cfg(feature = "ws")]
     amqp::publish_user_event(
         id,
@@ -301,6 +290,39 @@ pub async fn edit_user(
     )
     .await?;
 
+    Ok(after)
+}
+
+/// Edit User
+///
+/// Modifies information about the logged in user.
+#[utoipa::path(
+    patch,
+    path = "/users/me",
+    request_body = EditUserPayload,
+    responses(
+        (status = OK, description = "User object after modification", body = User),
+        (status = BAD_REQUEST, description = "Invalid payload", body = Error),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = CONFLICT, description = "Username is already taken", body = Error),
+    ),
+    security(("token" = [])),
+)]
+pub async fn edit_user(
+    Auth(id, flags): Auth,
+    Json(payload): Json<EditUserPayload>,
+) -> RouteResult<User> {
+    if flags.contains(UserFlags::BOT) {
+        return Err(Response::from(Error::UnsupportedAuthMethod {
+            message: String::from(
+                "Bots cannot edit their own user information. The bot owner can access this \
+                function through the Edit Bot endpoint (PATCH /bots/:id).",
+            ),
+        }));
+    }
+
+    let mut db = get_pool();
+    let after = _edit_user(&mut db, id, payload).await?;
     Ok(Response::ok(after))
 }
 
@@ -708,9 +730,144 @@ async fn create_bot(
     Ok(Response::created(CreateBotResponse { bot, token }))
 }
 
+/// Get Bot
+///
+/// Fetches information about a bot account by its ID.
+#[utoipa::path(
+    get,
+    path = "/bots/{bot_id}",
+    responses(
+        (status = OK, description = "Bot object", body = Bot),
+        (status = NOT_FOUND, description = "Bot not found", body = Error),
+    ),
+    security(("token" = [])),
+)]
+pub async fn get_bot(_auth: Auth, Path(bot_id): Path<u64>) -> RouteResult<Bot> {
+    let bot = get_pool()
+        .fetch_bot(bot_id)
+        .await?
+        .ok_or_not_found("bot", "bot not found")?;
+
+    Ok(Response::ok(bot))
+}
+
+/// Get All Bots
+///
+/// Fetches all bot accounts owned by the authenticated user.
+#[utoipa::path(
+    get,
+    path = "/bots",
+    responses(
+        (status = OK, description = "List of bots", body = Vec<Bot>),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+    ),
+    security(("token" = [])),
+)]
+pub async fn get_bots(Auth(user_id, flags): Auth) -> RouteResult<Vec<Bot>> {
+    if flags.contains(UserFlags::BOT) {
+        return Err(Response::from(Error::UnsupportedAuthMethod {
+            message: String::from(
+                "Bots cannot own other bots; this endpoint can only be accessed by user accounts.",
+            ),
+        }));
+    }
+
+    let bots = get_pool().fetch_all_bots_by_user(user_id).await?;
+    Ok(Response::ok(bots))
+}
+
+/// Edit Bot
+///
+/// Modifies information about a bot account.
+#[utoipa::path(
+    patch,
+    path = "/bots/{bot_id}",
+    request_body = EditBotPayload,
+    responses(
+        (status = OK, description = "Bot object after modification", body = Bot),
+        (status = BAD_REQUEST, description = "Invalid payload", body = Error),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = CONFLICT, description = "Username is already taken", body = Error),
+    ),
+    security(("token" = [])),
+)]
+pub async fn edit_bot(
+    Auth(user_id, flags): Auth,
+    Path(bot_id): Path<u64>,
+    Json(payload): Json<EditBotPayload>,
+) -> RouteResult<Bot> {
+    if flags.contains(UserFlags::BOT) {
+        return Err(Response::from(Error::UnsupportedAuthMethod {
+            message: String::from(
+                "Bots cannot edit their own bot information; this endpoint must be called by \
+                the bot owner.",
+            ),
+        }));
+    }
+
+    let db = get_pool();
+    db.assert_user_owns_bot(user_id, bot_id).await?;
+
+    let mut transaction = db.begin().await?;
+    let user = _edit_user(&mut transaction, bot_id, payload.user_payload.clone()).await?;
+    let after = transaction.edit_bot(user, payload).await?;
+    transaction.commit().await?;
+
+    Ok(Response::ok(after))
+}
+
+/// Delete Bot
+///
+/// Deletes a bot account. Requires the bot owner's password.
+#[utoipa::path(
+    delete,
+    path = "/bots/{bot_id}",
+    request_body = DeleteUserPayload,
+    responses(
+        (status = NO_CONTENT, description = "Bot was successfully deleted"),
+        (status = UNAUTHORIZED, description = "Invalid token/credentials", body = Error),
+        (status = BAD_REQUEST, description = "Invalid payload", body = Error),
+    ),
+    security(("token" = [])),
+)]
+pub async fn delete_bot(
+    Auth(user_id, flags): Auth,
+    Path(bot_id): Path<u64>,
+    Json(payload): Json<DeleteUserPayload>,
+) -> NoContentResult {
+    if flags.contains(UserFlags::BOT) {
+        return Err(Response::from(Error::UnsupportedAuthMethod {
+            message: String::from(
+                "Bots cannot delete other bots; this endpoint can only be accessed by user accounts."
+            ),
+        }));
+    }
+
+    let db = get_pool();
+    db.assert_user_owns_bot(user_id, bot_id).await?;
+
+    let DeleteUserPayload { password } = payload;
+    if !db.verify_password(bot_id, password).await? {
+        return Err(Response::from(Error::InvalidCredentials {
+            what: "password".to_string(),
+            message: "Invalid password".to_string(),
+        }));
+    }
+
+    let mut transaction = db.begin().await?;
+    transaction.delete_user(bot_id).await?;
+    transaction.delete_bot(bot_id).await?;
+    transaction.commit().await?;
+
+    #[cfg(feature = "ws")]
+    amqp::publish_user_event(bot_id, OutboundMessage::UserDelete { user_id: bot_id }).await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub fn router() -> Router {
     Router::new()
-        .route("/users", post(create_user.layer(ratelimit!(2, 300))))
+        .route("/users", post(create_user.layer(ratelimit!(3, 120))))
         .route(
             "/users/check/:username",
             get(check_username.layer(ratelimit!(5, 5))),
@@ -746,5 +903,14 @@ pub fn router() -> Router {
             "/relationships/:target_id",
             delete(delete_relationship.layer(ratelimit!(5, 5))),
         )
-        .route("/bots", post(create_bot.layer(ratelimit!(2, 120))))
+        .route(
+            "/bots",
+            get(get_bots.layer(ratelimit!(3, 5))).post(create_bot.layer(ratelimit!(3, 120))),
+        )
+        .route(
+            "/bots/:bot_id",
+            get(get_bot.layer(ratelimit!(3, 5)))
+                .patch(edit_bot.layer(ratelimit!(3, 15)))
+                .delete(delete_bot.layer(ratelimit!(2, 30))),
+        )
 }

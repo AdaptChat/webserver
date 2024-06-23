@@ -9,6 +9,177 @@ servers:
 - url: https://api.adapt.chat
   description: Production
 paths:
+  /bots:
+    get:
+      tags:
+      - users
+      summary: Get All Bots
+      description: Fetches all bot accounts owned by the authenticated user.
+      operationId: get_bots
+      responses:
+        '200':
+          description: List of bots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Bot'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
+    post:
+      tags:
+      - users
+      summary: Create Bot
+      description: Registers a new bot account with the given payload.
+      operationId: create_bot
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBotPayload'
+        required: true
+      responses:
+        '201':
+          description: Bot ID and token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateBotResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Username is already taken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
+  /bots/{bot_id}:
+    get:
+      tags:
+      - users
+      summary: Get Bot
+      description: Fetches information about a bot account by its ID.
+      operationId: get_bot
+      parameters:
+      - name: bot_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      responses:
+        '200':
+          description: Bot object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bot'
+        '404':
+          description: Bot not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
+    delete:
+      tags:
+      - users
+      summary: Delete Bot
+      description: Deletes a bot account. Requires the bot owner's password.
+      operationId: delete_bot
+      parameters:
+      - name: bot_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteUserPayload'
+        required: true
+      responses:
+        '204':
+          description: Bot was successfully deleted
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid token/credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
+    patch:
+      tags:
+      - users
+      summary: Edit Bot
+      description: Modifies information about a bot account.
+      operationId: edit_bot
+      parameters:
+      - name: bot_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditBotPayload'
+        required: true
+      responses:
+        '200':
+          description: Bot object after modification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bot'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Username is already taken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
   /channels/{channel_id}:
     get:
       tags:
@@ -2212,6 +2383,29 @@ components:
           format: int64
           description: The size of the attachment, in bytes.
           minimum: 0
+    Bot:
+      type: object
+      description: Represents details about a bot.
+      required:
+      - user
+      - owner_id
+      - default_permissions
+      - flags
+      properties:
+        default_permissions:
+          $ref: '#/components/schemas/Permissions'
+        flags:
+          $ref: '#/components/schemas/BotFlags'
+        owner_id:
+          type: integer
+          format: int64
+          description: The ID of the user who owns this bot.
+          minimum: 0
+        user:
+          $ref: '#/components/schemas/User'
+    BotFlags:
+      type: integer
+      format: int32
     ChangeEmailPayload:
       type: object
       description: Payload sent when changing a user's email.
@@ -2294,6 +2488,29 @@ components:
       description: |-
         Represents user info about the client. This has other information that is not available to the
         public, such as emails, guilds, and relationships (friends and blocked users).
+    CreateBotPayload:
+      type: object
+      description: Payload sent when creating a new bot account.
+      required:
+      - username
+      properties:
+        display_name:
+          type: string
+          description: The global display name of the bot. Must be between 2 and 32 characters.
+          nullable: true
+        public:
+          type: boolean
+          description: |-
+            Whether the bot is public. Public bots can be added by anyone, while private bots can only
+            be added by the owner.
+        username:
+          type: string
+          description: |-
+            The unique username of the bot. Must between 2 and 32 characters and only contain
+            alphanumeric characters, periods (.), hyphens (-), and underscores (_).
+
+            Note that unlike usernames, bot usernames are only unique to you. The full username of the
+            bot will be ``owner_username/given_username``, for example ``user123/MyBot``.
     CreateDmChannelPayload:
       oneOf:
       - type: object
@@ -2684,6 +2901,32 @@ components:
       description: Represents extra information associated with DM channels.
       discriminator:
         propertyName: type
+    EditBotPayload:
+      allOf:
+      - $ref: '#/components/schemas/EditUserPayload'
+      - type: object
+        properties:
+          default_permissions:
+            allOf:
+            - $ref: '#/components/schemas/Permissions'
+            nullable: true
+          global_enabled:
+            type: boolean
+            description: Whether the bot should support global access.
+            nullable: true
+          group_dm_enabled:
+            type: boolean
+            description: Whether the bot should support being added to group DMs.
+            nullable: true
+          guild_enabled:
+            type: boolean
+            description: Whether the bot should support being added to guilds.
+            nullable: true
+          public:
+            type: boolean
+            description: Whether the bot should be public. Leave empty to keep the current setting.
+            nullable: true
+      description: Payload sent to edit details of a bot account.
     EditChannelPayload:
       type: object
       description: The request body sent to modify a channel.
@@ -3201,6 +3444,25 @@ components:
             enum:
             - not_owner
       - type: object
+        description: You must be the owner of the bot to perform the requested action.
+        required:
+        - bot_id
+        - message
+        - type
+        properties:
+          bot_id:
+            type: integer
+            format: int64
+            description: The ID of the bot you are not the owner of.
+            minimum: 0
+          message:
+            type: string
+            description: The error message.
+          type:
+            type: string
+            enum:
+            - not_bot_owner
+      - type: object
         description: You are not the author of the message you are trying to edit.
         required:
         - message_id
@@ -3479,6 +3741,73 @@ components:
       description: An error that occurs within Adapt.
       discriminator:
         propertyName: type
+    ExtendedColor:
+      oneOf:
+      - type: object
+        description: A solid color.
+        required:
+        - color
+        - type
+        properties:
+          color:
+            type: integer
+            format: int32
+            description: The color of the solid color.
+            minimum: 0
+          type:
+            type: string
+            enum:
+            - solid
+      - allOf:
+        - $ref: '#/components/schemas/Gradient'
+        - type: object
+          required:
+          - type
+          properties:
+            type:
+              type: string
+              enum:
+              - gradient
+      description: |-
+        A color that can either be solid or a linear gradient. Individual colors are specified as
+        integers between 0 and 16777215.
+      discriminator:
+        propertyName: type
+    Gradient:
+      type: object
+      description: |-
+        A variation of an extended color that represents a linear gradient. Note that gradients are
+        strictly linear and are provided in this format to allow for better consistency and ease of
+        implementation in clients.
+      required:
+      - angle
+      - stops
+      properties:
+        angle:
+          type: number
+          format: float
+          description: The angle of the gradient, in radians.
+        stops:
+          type: array
+          items:
+            $ref: '#/components/schemas/GradientStop'
+          description: The color stops of the gradient.
+    GradientStop:
+      type: object
+      description: A single color stop in a linear gradient.
+      required:
+      - position
+      - color
+      properties:
+        color:
+          type: integer
+          format: int32
+          description: The color of the stop.
+          minimum: 0
+        position:
+          type: number
+          format: float
+          description: The position of the stop in the gradient, between 0 and 1.
     Guild:
       allOf:
       - $ref: '#/components/schemas/PartialGuild'
