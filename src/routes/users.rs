@@ -868,7 +868,7 @@ pub async fn delete_bot(
 /// owner's password.
 #[utoipa::path(
     post,
-    path = "/bots/:bot_id/tokens",
+    path = "/bots/{bot_id}/tokens",
     request_body = Option<RegenerateBotTokenPayload>,
     responses(
         (status = OK, description = "Token regenerated", body = LoginResponse),
