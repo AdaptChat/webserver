@@ -419,8 +419,7 @@ pub async fn delete_message(
             .fetch_member_permissions(guild_id, user_id, Some(channel_id))
             .await?;
 
-        db.assert_member_has_permissions_with(guild_id, perms, Permissions::VIEW_CHANNEL)
-            .await?;
+        db.assert_member_has_permissions_with(guild_id, perms, Permissions::VIEW_CHANNEL)?;
         // TODO: #[feature(let_chains)], when stabilized, will make this much cleaner
         if let Some(author_id) = db
             .inspect_message(message_id)
@@ -432,8 +431,7 @@ pub async fn delete_message(
                     guild_id,
                     perms,
                     Permissions::MANAGE_MESSAGES,
-                )
-                .await?;
+                )?;
 
                 db.assert_top_role_higher_than_target(guild_id, user_id, author_id)
                     .await?;
@@ -478,8 +476,7 @@ async fn modify_message_flags(
             db.fetch_member_permissions(guild_id, user_id, Some(channel_id))
                 .await?,
             permissions,
-        )
-        .await?;
+        )?;
     }
 
     let mut transaction = db.begin().await?;

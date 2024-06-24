@@ -119,8 +119,7 @@ pub async fn create_role(
     let mut db = get_pool();
 
     let member_permissions = db.fetch_member_permissions(guild_id, user_id, None).await?;
-    db.assert_member_has_permissions_with(guild_id, member_permissions, Permissions::MANAGE_ROLES)
-        .await?;
+    db.assert_member_has_permissions_with(guild_id, member_permissions, Permissions::MANAGE_ROLES)?;
 
     if !db.is_guild_owner(guild_id, user_id).await? {
         let (top_role_id, top_role_position) = db.fetch_top_role(guild_id, user_id).await?;
@@ -197,8 +196,7 @@ pub async fn edit_role(
 
     let mut db = get_pool();
     let member_permissions = db.fetch_member_permissions(guild_id, user_id, None).await?;
-    db.assert_member_has_permissions_with(guild_id, member_permissions, Permissions::MANAGE_ROLES)
-        .await?;
+    db.assert_member_has_permissions_with(guild_id, member_permissions, Permissions::MANAGE_ROLES)?;
     db.assert_top_role_higher_than(guild_id, user_id, role_id)
         .await?;
 

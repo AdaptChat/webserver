@@ -143,8 +143,7 @@ pub async fn edit_client_member(
 
     if let Maybe::Value(ref nick) = payload.nick {
         validate_nick(nick)?;
-        db.assert_member_has_permissions_with(guild_id, perms, Permissions::CHANGE_NICKNAME)
-            .await?;
+        db.assert_member_has_permissions_with(guild_id, perms, Permissions::CHANGE_NICKNAME)?;
     }
 
     let member = db.edit_client_member(guild_id, user_id, payload).await?;
@@ -190,14 +189,12 @@ pub async fn edit_member(
 
     if let Maybe::Value(ref nick) = payload.nick {
         validate_nick(nick)?;
-        db.assert_member_has_permissions_with(guild_id, perms, Permissions::MANAGE_NICKNAMES)
-            .await?;
+        db.assert_member_has_permissions_with(guild_id, perms, Permissions::MANAGE_NICKNAMES)?;
     }
 
     if !db.is_guild_owner(guild_id, user_id).await? {
         if let Some(ref roles) = payload.roles {
-            db.assert_member_has_permissions_with(guild_id, perms, Permissions::MANAGE_ROLES)
-                .await?;
+            db.assert_member_has_permissions_with(guild_id, perms, Permissions::MANAGE_ROLES)?;
 
             let (top_role_id, top_role_position) = db.fetch_top_role(guild_id, user_id).await?;
             let target_position = db.fetch_highest_position_in(guild_id, roles).await?;
@@ -344,6 +341,9 @@ pub async fn add_bot_to_guild(
     assert_not_bot_account(flags, "Bots cannot add other bots to guilds")?;
 
     let mut db = get_pool();
+    let member_permissions = db.fetch_member_permissions(guild_id, user_id, None).await?;
+    db.assert_member_has_permissions_with(guild_id, member_permissions, Permissions::MANAGE_GUILD)?;
+
     let bot = db
         .fetch_bot(bot_id)
         .await?
@@ -360,6 +360,17 @@ pub async fn add_bot_to_guild(
         let permissions = payload
             .and_then(|Json(p)| p.permissions)
             .unwrap_or(bot.default_permissions);
+
+        if !member_permissions.contains(permissions) {
+            return Err(Response::from(Error::MissingPermissions {
+                guild_id,
+                permissions,
+                message: String::from(
+                    "Your permissions set must be a superset of the permissions you are trying to \
+                    assign to the bot",
+                ),
+            }));
+        }
         db.create_member(guild_id, bot_id, permissions).await?
     };
     Ok(match member {
