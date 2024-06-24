@@ -248,7 +248,7 @@ pub async fn edit_role(
 /// ``MANAGE_ROLES`` permission.
 #[utoipa::path(
     patch,
-    path = "/guilds/{guild_id}/roles/{role_id}",
+    path = "/guilds/{guild_id}/roles",
     request_body = Vec<u64>,
     responses(
         (status = OK, description = "Modified role positions"),

@@ -1769,6 +1769,61 @@ paths:
                 $ref: '#/components/schemas/Error'
       security:
       - token: []
+    patch:
+      tags:
+      - roles
+      summary: Edit Role Positions
+      description: |-
+        Modifies the positions of all roles in the guild with the given ID. You must have the
+        ``MANAGE_ROLES`` permission.
+      operationId: edit_role_positions
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: integer
+                format: int64
+                minimum: 0
+        required: true
+      responses:
+        '200':
+          description: Modified role positions
+        '400':
+          description: "Invalid list of role IDs. Your array must contain all roles in the guild exactly\n                once, including roles above your top role but excluding the default role.\n            "
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: "You are forbidden from reordering roles. This can be because:\n* You are not a member of the guild.\n* You do not have the `MANAGE_ROLES` permission in the guild.\n* A role higher than or equal to your top role had its position changed.\n            "
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild or role not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
   /guilds/{guild_id}/roles/{role_id}:
     get:
       tags:
@@ -1868,13 +1923,20 @@ paths:
     patch:
       tags:
       - roles
-      summary: Edit Role Positions
+      summary: Edit Role
       description: |-
-        Modifies the positions of all roles in the guild with the given ID. You must have the
-        ``MANAGE_ROLES`` permission.
-      operationId: edit_role_positions
+        Modifies the role with the given ID in the given guild. You must have the `MANAGE_ROLES`
+        permission, and the role must be lower than your highest role.
+      operationId: edit_role
       parameters:
       - name: guild_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: role_id
         in: path
         required: true
         schema:
@@ -1885,21 +1947,15 @@ paths:
         content:
           application/json:
             schema:
-              type: array
-              items:
-                type: integer
-                format: int64
-                minimum: 0
+              $ref: '#/components/schemas/EditRolePayload'
         required: true
       responses:
         '200':
-          description: Modified role positions
-        '400':
-          description: "Invalid list of role IDs. Your array must contain all roles in the guild exactly\n                once, including roles above your top role but excluding the default role.\n            "
+          description: Modified role object
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/Role'
         '401':
           description: Invalid token
           content:
@@ -1907,7 +1963,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: "You are forbidden from reordering roles. This can be because:\n* You are not a member of the guild.\n* You do not have the `MANAGE_ROLES` permission in the guild.\n* A role higher than or equal to your top role had its position changed.\n            "
+          description: |
+            You are forbidden from editing the role. This can be because:
+            * You are not a member of the guild.
+            * You do not have the `MANAGE_ROLES` permission in the guild.
+            * You are editing a role that allows or denies permissions you do not have.
+            * You are editing a role that is higher than your highest role.
           content:
             application/json:
               schema:
@@ -2633,6 +2694,17 @@ components:
 
             Note that unlike usernames, bot usernames are only unique to you. The full username of the
             bot will be ``owner_username/given_username``, for example ``user123/MyBot``.
+    CreateBotResponse:
+      allOf:
+      - $ref: '#/components/schemas/Bot'
+      - type: object
+        required:
+        - token
+        properties:
+          token:
+            type: string
+            description: The token to use for authentication.
+      description: Data sent when creating a new bot account.
     CreateDmChannelPayload:
       oneOf:
       - type: object

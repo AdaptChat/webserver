@@ -96,6 +96,7 @@ use essence::{
         http::user::ChangePasswordPayload,
         http::user::SendFriendRequestPayload,
         http::user::CreateBotPayload,
+        http::user::CreateBotResponse,
         http::user::EditBotPayload,
         http::user::DeleteBotPayload,
         http::user::RegenerateBotTokenPayload,
