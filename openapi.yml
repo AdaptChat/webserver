@@ -66,44 +66,6 @@ paths:
                 $ref: '#/components/schemas/Error'
       security:
       - token: []
-  /bots/:bot_id/tokens:
-    post:
-      tags:
-      - users
-      summary: Regenerate Bot Token
-      description: |-
-        Regenerates a token for a bot you own. If the bot is in over 20 guilds, you must provide the bot
-        owner's password.
-      operationId: regenerate_bot_token
-      requestBody:
-        content:
-          application/json:
-            schema:
-              allOf:
-              - $ref: '#/components/schemas/RegenerateBotTokenPayload'
-              nullable: true
-        required: false
-      responses:
-        '200':
-          description: Token regenerated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LoginResponse'
-        '400':
-          description: Invalid payload
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Invalid token/credentials
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-      - token: []
   /bots/{bot_id}:
     get:
       tags:
@@ -214,6 +176,52 @@ paths:
                 $ref: '#/components/schemas/Error'
         '409':
           description: Username is already taken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
+  /bots/{bot_id}/tokens:
+    post:
+      tags:
+      - users
+      summary: Regenerate Bot Token
+      description: |-
+        Regenerates a token for a bot you own. If the bot is in over 20 guilds, you must provide the bot
+        owner's password.
+      operationId: regenerate_bot_token
+      parameters:
+      - name: bot_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+              - $ref: '#/components/schemas/RegenerateBotTokenPayload'
+              nullable: true
+        required: false
+      responses:
+        '200':
+          description: Token regenerated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid token/credentials
           content:
             application/json:
               schema:
@@ -1008,6 +1016,72 @@ paths:
                 $ref: '#/components/schemas/Error'
         '403':
           description: You do not have permission to modify the guild
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
+  /guilds/{guild_id}/bots/{bot_id}:
+    put:
+      tags:
+      - members
+      summary: Add Bot to Guild
+      description: |-
+        Adds the bot to the guild with the given ID. If not the owner of the bot, the bot must be
+        public. If the bot is already in the guild, nothing happens.
+      operationId: add_bot_to_guild
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: bot_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      requestBody:
+        description: ''
+        content:
+          application/json:
+            schema:
+              allOf:
+              - $ref: '#/components/schemas/AddBotPayload'
+              nullable: true
+        required: false
+      responses:
+        '200':
+          description: Bot is already in the guild, no change
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+        '201':
+          description: Added bot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Bot is not public
           content:
             application/json:
               schema:
@@ -2399,6 +2473,14 @@ paths:
       - token: []
 components:
   schemas:
+    AddBotPayload:
+      type: object
+      description: The payload sent to add a bot to a guild.
+      properties:
+        permissions:
+          allOf:
+          - $ref: '#/components/schemas/Permissions'
+          nullable: true
     Attachment:
       type: object
       description: Represents a message attachment.
@@ -3075,6 +3157,10 @@ components:
           description: |-
             The new nickname of the member. Leave empty to keep the current nickname, and set to `null`
             to remove the nickname.
+          nullable: true
+        permissions:
+          allOf:
+          - $ref: '#/components/schemas/Permissions'
           nullable: true
         roles:
           type: array
@@ -4225,6 +4311,7 @@ components:
         required:
         - guild_id
         - joined_at
+        - permissions
         properties:
           guild_id:
             type: integer
@@ -4239,6 +4326,8 @@ components:
             type: string
             description: The nickname of the member. `None` if the member has no nickname.
             nullable: true
+          permissions:
+            $ref: '#/components/schemas/Permissions'
           roles:
             type: array
             items:

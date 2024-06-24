@@ -134,6 +134,44 @@ pub async fn delete_guild_invite(
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[cfg(feature = "ws")]
+pub(crate) async fn publish_member_create_events(
+    member: Member,
+    invite: Option<Invite>,
+    nonce: Option<String>,
+) -> Result<(), Response<Error>> {
+    let db = get_pool();
+
+    #[cfg(feature = "ws")]
+    tokio::spawn(async move {
+        let user_id = member.user_id();
+        let guild_id = member.guild_id;
+
+        let guild_event =
+            amqp::publish_bulk_event(guild_id, OutboundMessage::MemberJoin { member, invite });
+        let user_event = amqp::publish_user_event(
+            user_id,
+            OutboundMessage::GuildCreate {
+                guild: db
+                    .fetch_guild(guild_id, GetGuildQuery::all())
+                    .await?
+                    .ok_or_else(|| Error::InternalError {
+                        what: None,
+                        message: String::from(
+                            "Guild registered for invite but could not be fetched",
+                        ),
+                        debug: None,
+                    })?,
+                nonce,
+            },
+        );
+
+        tokio::try_join!(guild_event, user_event)
+    });
+
+    Ok(())
+}
+
 /// Use Invite
 ///
 /// Joins a guild using an invite. If the guild was successfully joined, the created member object
@@ -161,40 +199,7 @@ pub async fn use_invite(
     let (invite, member) = db.use_invite(user_id, code).await?;
     let member = if let Some(member) = member {
         #[cfg(feature = "ws")]
-        let member_clone = member.clone();
-
-        #[cfg(feature = "ws")]
-        tokio::spawn(async move {
-            let member = member_clone;
-            let user_id = member.user_id();
-            let guild_id = member.guild_id;
-
-            let guild_event = amqp::publish_bulk_event(
-                guild_id,
-                OutboundMessage::MemberJoin {
-                    member,
-                    invite: Some(invite),
-                },
-            );
-            let user_event = amqp::publish_user_event(
-                user_id,
-                OutboundMessage::GuildCreate {
-                    guild: db
-                        .fetch_guild(guild_id, GetGuildQuery::all())
-                        .await?
-                        .ok_or_else(|| Error::InternalError {
-                            what: None,
-                            message: String::from(
-                                "Guild registered for invite but could not be fetched",
-                            ),
-                            debug: None,
-                        })?,
-                    nonce: query.nonce,
-                },
-            );
-
-            tokio::try_join!(guild_event, user_event)
-        });
+        publish_member_create_events(member.clone(), Some(invite), query.nonce).await?;
 
         member
     } else {

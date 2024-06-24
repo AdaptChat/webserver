@@ -1,7 +1,7 @@
 #[cfg(feature = "ws")]
 use crate::amqp::prelude::*;
-use crate::cdn::{upload_banner, upload_icon};
 use crate::{
+    cdn::{upload_banner, upload_icon},
     extract::{Auth, Json},
     ratelimit::ratelimit,
     routes::{NoContentResult, RouteResult},

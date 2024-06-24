@@ -1,16 +1,23 @@
 #[cfg(feature = "ws")]
 use crate::amqp::prelude::*;
+#[cfg(feature = "ws")]
+use crate::routes::invites::publish_member_create_events;
 use crate::{
     extract::{Auth, Json},
     ratelimit::ratelimit,
-    routes::{NoContentResult, RouteResult},
+    routes::{assert_not_bot_account, NoContentResult, RouteResult},
     Response,
 };
-use axum::{extract::Path, handler::Handler, routing::get, Router};
+use axum::{
+    extract::Path,
+    handler::Handler,
+    routing::{get, put},
+    Router,
+};
 use essence::{
-    db::{get_pool, GuildDbExt, MemberDbExt, RoleDbExt},
-    http::member::{EditClientMemberPayload, EditMemberPayload},
-    models::{Member, Permissions},
+    db::{get_pool, GuildDbExt, MemberDbExt, RoleDbExt, UserDbExt},
+    http::member::{AddBotPayload, EditClientMemberPayload, EditMemberPayload},
+    models::{BotFlags, Member, Permissions},
     utoipa, Error, Maybe, NotFoundExt,
 };
 use reqwest::StatusCode;
@@ -313,6 +320,70 @@ pub async fn leave_guild(Auth(user_id, _): Auth, Path(guild_id): Path<u64>) -> N
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Add Bot to Guild
+///
+/// Adds the bot to the guild with the given ID. If not the owner of the bot, the bot must be
+/// public. If the bot is already in the guild, nothing happens.
+#[utoipa::path(
+    put,
+    path = "/guilds/{guild_id}/bots/{bot_id}",
+    responses(
+        (status = OK, description = "Bot is already in the guild, no change", body = Member),
+        (status = CREATED, description = "Added bot", body = Member),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = FORBIDDEN, description = "Bot is not public", body = Error),
+        (status = NOT_FOUND, description = "Guild not found", body = Error),
+    ),
+    security(("token" = [])),
+)]
+pub async fn add_bot_to_guild(
+    Auth(user_id, flags): Auth,
+    Path((guild_id, bot_id)): Path<(u64, u64)>,
+    payload: Option<Json<AddBotPayload>>,
+) -> RouteResult<Member> {
+    assert_not_bot_account(flags, "Bots cannot add other bots to guilds")?;
+
+    let mut db = get_pool();
+    let bot = db
+        .fetch_bot(bot_id)
+        .await?
+        .ok_or_not_found("bot", "Bot not found")?;
+
+    if !bot.flags.contains(BotFlags::PUBLIC) && bot.owner_id != user_id {
+        return Err(Response::from(Error::NotBotOwner {
+            bot_id,
+            message: "You must own this private bot to add it to a guild".to_string(),
+        }));
+    }
+
+    let member = {
+        let permissions = payload
+            .and_then(|Json(p)| p.permissions)
+            .unwrap_or(bot.default_permissions);
+        db.create_member(guild_id, bot_id, permissions).await?
+    };
+    Ok(match member {
+        Some(member) => {
+            #[cfg(feature = "ws")]
+            publish_member_create_events(member.clone(), None, None).await?;
+
+            Response::created(member)
+        }
+        None => Response::ok(
+            db.fetch_member_by_id(guild_id, bot_id)
+                .await?
+                .ok_or_else(|| {
+                    Response::from(Error::InternalError {
+                        what: None,
+                        message: "Bot was not added to the guild, but no error occurred"
+                            .to_string(),
+                        debug: None,
+                    })
+                })?,
+        ),
+    })
+}
+
 pub fn router() -> Router {
     Router::new()
         .route(
@@ -330,5 +401,9 @@ pub fn router() -> Router {
             get(get_member.layer(ratelimit!(5, 7)))
                 .patch(edit_member.layer(ratelimit!(4, 7)))
                 .delete(kick_member.layer(ratelimit!(4, 8))),
+        )
+        .route(
+            "/guilds/:guild_id/bots/:bot_id",
+            put(add_bot_to_guild.layer(ratelimit!(3, 8))),
         )
 }
