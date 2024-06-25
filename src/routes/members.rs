@@ -209,6 +209,20 @@ pub async fn edit_member(
                 }));
             }
         }
+
+        if let Some(permissions) = payload.permissions {
+            db.assert_member_has_permissions_with(guild_id, perms, Permissions::MANAGE_GUILD)?;
+            if !perms.contains(permissions) {
+                return Err(Response::from(Error::MissingPermissions {
+                    guild_id,
+                    permissions,
+                    message: String::from(
+                        "Your permissions set must be a superset of the permissions you are trying to \
+                        assign to the member",
+                    ),
+                }));
+            }
+        }
     }
 
     let (before, after) = db.edit_member(guild_id, member_id, payload).await?;
