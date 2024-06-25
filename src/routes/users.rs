@@ -773,9 +773,10 @@ pub async fn get_bots(Auth(user_id, flags): Auth) -> RouteResult<Vec<Bot>> {
 pub async fn edit_bot(
     Auth(user_id, flags): Auth,
     Path(bot_id): Path<u64>,
-    Json(payload): Json<EditBotPayload>,
+    Json(mut payload): Json<EditBotPayload>,
 ) -> RouteResult<Bot> {
     assert_not_bot_account(flags, "Bots cannot edit their own bot information; this endpoint must be called by the bot owner.")?;
+    payload.user_payload.username = None;
 
     let db = get_pool();
     db.assert_user_owns_bot(user_id, bot_id).await?;
