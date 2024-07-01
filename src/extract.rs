@@ -88,11 +88,17 @@ where
     type Rejection = Response<Error>;
 
     async fn from_request(req: Request<Body>, state: &S) -> Result<Self, Self::Rejection> {
+        enum DeserializeMethod {
+            Json,
+            Msgpack,
+        }
+
         let content_type = req.headers().get(header::CONTENT_TYPE);
 
-        if let Some(c) = content_type {
+        let method = if let Some(c) = content_type {
             match c.to_str() {
-                Ok("application/json") => (),
+                Ok("application/json") => DeserializeMethod::Json,
+                Ok("application/msgpack" | "application/x-msgpack") => DeserializeMethod::Msgpack,
                 Ok(c) => {
                     return Err(Response::from(Error::MalformedBody {
                         error_type: MalformedBodyErrorType::InvalidContentType,
@@ -113,9 +119,8 @@ where
                     was not present"
                     .to_string(),
             }));
-        }
+        };
 
-        // Deserialize the body using simd_json
         let body = Bytes::from_request(req, state)
             .await
             .map_err(|err| Error::InternalError {
@@ -124,13 +129,20 @@ where
                 debug: Some(format!("{err:?}")),
             })?;
 
-        simd_json::from_reader(body.reader())
-            .map(Json)
-            .map_err(|err| Error::MalformedBody {
+        let deserialized = match method {
+            DeserializeMethod::Json => simd_json::from_reader(body.reader())
+                .map(Json)
+                .map_err(|e| e.to_string()),
+            DeserializeMethod::Msgpack => rmp_serde::from_read(body.reader())
+                .map(Json)
+                .map_err(|e| e.to_string()),
+        };
+        deserialized.map_err(|message| {
+            Response::from(Error::MalformedBody {
                 error_type: MalformedBodyErrorType::InvalidJson,
-                message: err.to_string(),
+                message,
             })
-            .map_err(Response::from)
+        })
     }
 }
 
