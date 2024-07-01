@@ -14,19 +14,19 @@ use axum::{
     routing::{get, put},
     Router,
 };
-use essence::db::RoleDbExt;
-use essence::models::PermissionOverwrite;
-use essence::snowflake::SnowflakeReader;
 use essence::{
     cache::ChannelInspection,
-    db::{get_pool, ChannelDbExt, GuildDbExt, UserDbExt},
+    db::{get_pool, ChannelDbExt, GuildDbExt, RoleDbExt, UserDbExt},
     error::UserInteractionType,
     http::channel::{
         CreateDmChannelPayload, CreateGuildChannelInfo, CreateGuildChannelPayload,
         EditChannelPayload,
     },
-    models::{Channel, ChannelType, DmChannel, GuildChannel, ModelType, Permissions, UserFlags},
-    snowflake::generate_snowflake,
+    models::{
+        Channel, ChannelType, DmChannel, GuildChannel, ModelType, PermissionOverwrite, Permissions,
+        UserFlags,
+    },
+    snowflake::{generate_snowflake, SnowflakeReader},
     utoipa, Error, Maybe, NotFoundExt,
 };
 use futures_util::future::TryJoinAll;
@@ -269,6 +269,7 @@ async fn validate_overwrites(
 ///
 /// Creates a new channel in the guild with the given payload. You must have the `MANAGE_CHANNELS`
 /// permission to use this endpoint.
+#[cfg_attr(not(feature = "ws"), allow(unused_mut))]
 #[utoipa::path(
     post,
     path = "/guilds/{guild_id}/channels",

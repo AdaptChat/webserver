@@ -56,6 +56,7 @@ pub(crate) async fn handle_accept_header(request: Request, next: Next) -> AxumRe
 
     if let Some(handle) = response.extensions_mut().remove::<ResponseHandle>() {
         let (status, body) = handle;
+        #[allow(clippy::single_match_else)]
         let (mimetype, body) = match accept.as_deref() {
             Some(b"msgpack" | b"application/msgpack" | b"application/x-msgpack") => {
                 let bytes = match rmp_serde::to_vec(&body) {

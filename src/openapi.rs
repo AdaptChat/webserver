@@ -1,4 +1,4 @@
-use crate::routes::{auth, channels, guilds, invites, members, messages, roles, users};
+use crate::routes::{auth, channels, emojis, guilds, invites, members, messages, roles, users};
 use essence::{
     http, models,
     utoipa::{
@@ -68,6 +68,11 @@ use essence::{
         messages::delete_message,
         messages::pin_message,
         messages::unpin_message,
+        emojis::get_emoji,
+        emojis::list_guild_emojis,
+        emojis::create_emoji,
+        emojis::edit_emoji,
+        emojis::delete_emoji,
     ),
     components(schemas(
         http::auth::LoginRequest,
@@ -77,6 +82,8 @@ use essence::{
         http::channel::CreateGuildChannelInfo,
         http::channel::CreateDmChannelPayload,
         http::channel::EditChannelPayload,
+        http::emoji::CreateEmojiPayload,
+        http::emoji::EditEmojiPayload,
         http::guild::CreateGuildPayload,
         http::guild::EditGuildPayload,
         http::guild::DeleteGuildPayload,
@@ -129,6 +136,9 @@ use essence::{
         models::MaybePartialMessage,
         models::MessageFlags,
         models::PermissionPair,
+        models::CustomEmoji,
+        models::PartialEmoji,
+        models::Reaction,
         models::Role,
         models::RoleFlags,
         models::User,

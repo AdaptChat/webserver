@@ -814,6 +814,42 @@ paths:
                 $ref: '#/components/schemas/Error'
       security:
       - token: []
+  /emojis/{emoji_id}:
+    get:
+      tags:
+      - emojis
+      summary: Get Emoji
+      description: Gets information about a custom emoji.
+      operationId: get_emoji
+      parameters:
+      - name: emoji_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      responses:
+        '200':
+          description: Custom emoji object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomEmoji'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Emoji not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
   /guilds:
     get:
       tags:
@@ -1181,6 +1217,224 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Guild not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
+  /guilds/{guild_id}/emojis:
+    get:
+      tags:
+      - emojis
+      summary: List Custom Emojis
+      description: |-
+        Lists all custom emojis in the guild. If the guild is not public, you must be a member of the
+        guild to use this endpoint.
+      operationId: list_guild_emojis
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      responses:
+        '200':
+          description: List of custom emojis
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomEmoji'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: The guild is not public and you are not a member of the guild.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
+    post:
+      tags:
+      - emojis
+      summary: Create Custom Emoji
+      description: |-
+        Creates a new custom emoji in the guild. You must have the `MANAGE_EMOJIS` permission for the
+        guild to use this endpoint.
+      operationId: create_emoji
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEmojiPayload'
+        required: true
+      responses:
+        '201':
+          description: Custom emoji object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '400':
+          description: Invalid payload or name length
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: |-
+            You are forbidden from creating the emoji. This can be because:
+            * You are not a member of the guild.
+            * You do not have the `MANAGE_EMOJIS` permission in the guild.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
+  /guilds/{guild_id}/emojis/{emoji_id}:
+    delete:
+      tags:
+      - emojis
+      summary: Delete Emoji
+      description: |-
+        Deletes a custom emoji. You must have the `MANAGE_EMOJIS` permission for the guild to use this
+        endpoint.
+      operationId: delete_emoji
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: emoji_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      responses:
+        '204':
+          description: Emoji deleted
+          content:
+            application/json:
+              schema:
+                default: null
+                nullable: true
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing Manage Emojis permission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Emoji not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
+    patch:
+      tags:
+      - emojis
+      summary: Edit Emoji
+      description: |-
+        Modifies a custom emoji. You must have the `MANAGE_EMOJIS` permission for the guild to use this
+        endpoint.
+      operationId: edit_emoji
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: emoji_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEmojiPayload'
+        required: true
+      responses:
+        '200':
+          description: Custom emoji object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomEmoji'
+        '400':
+          description: Invalid payload or name length
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing Manage Emojis permission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Emoji not found
           content:
             application/json:
               schema:
@@ -2746,6 +3000,22 @@ components:
       description: The request body sent to create a new DM or group channel.
       discriminator:
         propertyName: type
+    CreateEmojiPayload:
+      type: object
+      description: The payload sent to create a new emoji.
+      required:
+      - name
+      - image
+      properties:
+        image:
+          type: string
+          description: |-
+            The emoji image.
+            The image should be represented as a
+            [Data URI scheme](https://en.wikipedia.org/wiki/Data_URI_scheme).
+        name:
+          type: string
+          description: The name of the emoji.
     CreateGuildChannelInfo:
       oneOf:
       - type: object
@@ -3000,6 +3270,33 @@ components:
         token:
           type: string
           description: The token to use for authentication.
+    CustomEmoji:
+      type: object
+      description: Represents a custom emoji.
+      required:
+      - id
+      - guild_id
+      - name
+      properties:
+        created_by:
+          type: integer
+          format: int64
+          description: The ID of the user that created the emoji. This is `None` if the user has been deleted.
+          nullable: true
+          minimum: 0
+        guild_id:
+          type: integer
+          format: int64
+          description: The ID of the guild the emoji is in.
+          minimum: 0
+        id:
+          type: integer
+          format: int64
+          description: The ID of the emoji.
+          minimum: 0
+        name:
+          type: string
+          description: The name of the emoji.
     DeleteBotPayload:
       type: object
       description: Payload sent when deleting a bot.
@@ -3188,6 +3485,19 @@ components:
             The new nickname of the member. Leave empty to keep the current nickname, and set to `null`
             to remove the nickname.
           nullable: true
+    EditEmojiPayload:
+      type: object
+      description: |-
+        The payload sent to modify an emoji.
+
+        # Note
+        The image of an emoji is immutable. To change the image, create a new emoji instead.
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          description: The new name of the emoji.
     EditGuildPayload:
       type: object
       description: The payload sent to edit a guild.
@@ -4616,6 +4926,21 @@ components:
     NotificationFlags:
       type: integer
       format: int32
+    PartialEmoji:
+      type: object
+      description: Represents partial information about a custom emoji or a unicode emoji.
+      required:
+      - name
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: The ID of the custom emoji. This is `None` if the emoji is a unicode emoji.
+          nullable: true
+          minimum: 0
+        name:
+          type: string
+          description: The name of the custom emoji, or the emoji itself if this is a unicode emoji.
     PartialGuild:
       type: object
       description: Represents a guild with partial information, sometimes referred to as a server.
@@ -4701,6 +5026,40 @@ components:
     PrivacyConfiguration:
       type: integer
       format: int32
+    Reaction:
+      type: object
+      description: Represents a reaction on a message.
+      required:
+      - message_id
+      - emoji
+      - user_ids
+      properties:
+        created_at:
+          type: array
+          items:
+            type: string
+            format: date-time
+          description: |-
+            A list of timestamps representing when the users reacted with this emoji. The index of the
+            timestamp corresponds to the index of the user ID in `user_ids`.
+
+            This is **only** provided when explicitly fetching reactions for a message. Otherwise, this
+            is `None`.
+          nullable: true
+        emoji:
+          $ref: '#/components/schemas/PartialEmoji'
+        message_id:
+          type: integer
+          format: int64
+          description: The ID of the message the reaction is on.
+          minimum: 0
+        user_ids:
+          type: array
+          items:
+            type: integer
+            format: int64
+            minimum: 0
+          description: A list of user IDs that have reacted with this emoji.
     RegenerateBotTokenPayload:
       type: object
       description: Payload sent when regenerating a bot's token.
