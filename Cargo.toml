@@ -16,13 +16,14 @@ axum = { version = "0.7", features = ["multipart"] }
 axum-extra = { version = "0.9", features = ["typed-header"] }
 bincode = { version = "2.0.0-rc", optional = true }
 bytes = "1"
-dashmap = "5.4"
+dashmap = "5.5"
 data-url = "0.3"
 deadpool-lapin = { version = "0.12", features = ["serde"], optional = true }
 deadqueue = { version = "0.2", features = ["unlimited"], default-features = false }
 dotenv = "0.15"
 dotenv_codegen = { git = "https://github.com/FerrisChat/dotenv" }
 env_logger = "0.11"
+erased-serde = "0.4"
 essence = { path = "../essence", features = ["webserver"] }
 fcm_v1 = { git = "https://github.com/Cryptex-github/fcm_v1.git" }
 forwarded-header-value = "0.1"

@@ -1,9 +1,15 @@
 use axum::{
-    http::{header::CONTENT_TYPE, StatusCode},
+    extract::Request,
+    http::{
+        header::{ACCEPT, CONTENT_TYPE},
+        StatusCode,
+    },
+    middleware::Next,
     response::{IntoResponse, Response as AxumResponse},
 };
+use erased_serde::Serialize;
 use essence::Error;
-use serde::Serialize;
+use std::sync::Arc;
 
 /// A response to an endpoint.
 #[derive(Clone, Debug)]
@@ -41,22 +47,54 @@ impl<T: Into<Error>> From<T> for Response<Error> {
     }
 }
 
-impl<T: Serialize> IntoResponse for Response<T> {
-    fn into_response(self) -> AxumResponse {
-        let bytes = match simd_json::to_vec(&self.1) {
-            Ok(bytes) => bytes,
-            // TODO: this could become infinite recursion
-            Err(err) => {
-                return serialization_error(&err);
+type ResponseHandle = (StatusCode, Arc<dyn Serialize + Send + Sync>);
+
+pub(crate) async fn handle_accept_header(request: Request, next: Next) -> AxumResponse {
+    let accept = request.headers().get(ACCEPT).map(|v| v.as_ref().to_owned());
+
+    let mut response = next.run(request).await;
+
+    if let Some(handle) = response.extensions_mut().remove::<ResponseHandle>() {
+        let (status, body) = handle;
+        let (mimetype, body) = match accept.as_deref() {
+            Some(b"msgpack" | b"application/msgpack" | b"application/x-msgpack") => {
+                let bytes = match rmp_serde::to_vec(&body) {
+                    Ok(bytes) => bytes,
+                    Err(err) => {
+                        return serialization_error(&err);
+                    }
+                };
+                ("application/msgpack", bytes)
+            }
+            _ => {
+                let bytes = match simd_json::to_vec(&body) {
+                    Ok(bytes) => bytes,
+                    // TODO: this could become infinite recursion
+                    Err(err) => {
+                        return serialization_error(&err);
+                    }
+                };
+                ("application/json", bytes)
             }
         };
-
         axum::http::Response::builder()
-            .status(self.0)
-            .header(CONTENT_TYPE, "application/json")
-            .body(axum::body::Body::from(bytes))
+            .status(status)
+            .header(CONTENT_TYPE, mimetype)
+            .body(axum::body::Body::from(body))
             .expect("invalid http status code received")
             .into_response()
+    } else {
+        response
+    }
+}
+
+impl<T: Serialize + Send + Sync + 'static> IntoResponse for Response<T> {
+    fn into_response(self) -> AxumResponse {
+        let mut response = StatusCode::NOT_IMPLEMENTED.into_response();
+        response
+            .extensions_mut()
+            .insert::<ResponseHandle>((self.0, Arc::new(self.1)));
+        response
     }
 }
 

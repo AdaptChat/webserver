@@ -80,6 +80,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .merge(routes::roles::router())
         .merge(routes::users::router())
         .merge(Scalar::with_url("/docs", spec))
+        .layer(axum::middleware::from_fn(response::handle_accept_header))
         .layer(CorsLayer::permissive());
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8077));
