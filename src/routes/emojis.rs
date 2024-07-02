@@ -1,4 +1,10 @@
-use axum::{extract::Path, handler::Handler, http::StatusCode, routing::get, Router};
+use axum::{
+    extract::Path,
+    handler::Handler,
+    http::StatusCode,
+    routing::{get, patch},
+    Router,
+};
 use essence::{
     db::{get_pool, EmojiDbExt, GuildDbExt},
     http::{
@@ -15,8 +21,25 @@ use crate::{
     cdn::upload_custom_emoji,
     extract::{Auth, Json},
     ratelimit::ratelimit,
+    unicode::{get_emoji_lookup, EmojiData},
     Response,
 };
+
+/// List Unicode Emojis
+///
+/// Lists all supported unicode emojis. This endpoint does not require authentication.
+///
+/// The data returned from this endpoint is extracted and up to date with GitHub's
+/// [genmoji](https://github.com/github/gemoji/blob/master/db/emoji.json).
+#[allow(clippy::unused_async)]
+#[utoipa::path(
+    get,
+    path = "/emojis",
+    responses((status = OK, description = "List of unicode emojis", body = Vec<EmojiData>)),
+)]
+pub async fn list_unicode_emojis() -> RouteResult<Vec<EmojiData>> {
+    Ok(Response::ok(get_emoji_lookup().values().cloned().collect()))
+}
 
 /// Create Custom Emoji
 ///
@@ -43,7 +66,7 @@ use crate::{
     ),
     security(("token" = [])),
 )]
-pub async fn create_emoji(
+async fn create_emoji(
     Auth(user_id, _): Auth,
     Path(guild_id): Path<u64>,
     Json(CreateEmojiPayload { name, image }): Json<CreateEmojiPayload>,
@@ -133,7 +156,7 @@ pub async fn get_emoji(_: Auth, Path(emoji_id): Path<u64>) -> RouteResult<Custom
 #[utoipa::path(
     patch,
     path = "/guilds/{guild_id}/emojis/{emoji_id}",
-    request_body = UpdateEmojiPayload,
+    request_body = EditEmojiPayload,
     responses(
         (status = OK, description = "Custom emoji object", body = CustomEmoji),
         (status = UNAUTHORIZED, description = "Invalid token", body = Error),
@@ -192,7 +215,11 @@ pub fn router() -> Router {
         )
         .route(
             "/guilds/:guild_id/emojis/:emoji_id",
-            get(get_emoji).patch(edit_emoji).delete(delete_emoji),
+            patch(edit_emoji.layer(ratelimit!(5, 5))).delete(delete_emoji.layer(ratelimit!(5, 5))),
         )
-        .route("/emojis/:emoji_id", get(get_emoji))
+        .route("/emojis", get(list_unicode_emojis.layer(ratelimit!(5, 5))))
+        .route(
+            "/emojis/:emoji_id",
+            get(get_emoji.layer(ratelimit!(20, 10))),
+        )
 }

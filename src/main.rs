@@ -25,6 +25,7 @@ mod openapi;
 pub mod ratelimit;
 pub mod response;
 pub mod routes;
+pub mod unicode;
 
 pub(crate) use ratelimit::ratelimit;
 pub use response::Response;
@@ -48,6 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .await?;
     essence::auth::configure_hasher(include_bytes!("../secret.key")).await;
     cdn::setup()?;
+    unicode::setup().await?;
     notification::start_workers::<5>();
     #[cfg(feature = "ws")]
     amqp::connect().await?;

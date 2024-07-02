@@ -6,21 +6,25 @@ use crate::{
     notification::{self, Notification},
     ratelimit::ratelimit,
     routes::{NoContentResult, RouteResult},
+    unicode::get_emoji_lookup,
     Response,
 };
 use axum::{
     extract::{Path, Query},
     handler::Handler,
     http::StatusCode,
-    routing::{get, put},
+    routing::{delete, get, put},
     Router,
 };
 use essence::{
-    db::{get_pool, ChannelDbExt, GuildDbExt, MemberDbExt, MessageDbExt, RoleDbExt, UserDbExt},
+    db::{
+        get_pool, ChannelDbExt, EmojiDbExt, GuildDbExt, MemberDbExt, MessageDbExt, RoleDbExt,
+        UserDbExt,
+    },
     http::message::{CreateMessagePayload, EditMessagePayload, MessageHistoryQuery},
     models::{
         Attachment, Channel, DmChannelInfo, Embed, MemberOrUser, Message, MessageFlags,
-        MessageInfo, ModelType, Permissions,
+        MessageInfo, ModelType, PartialEmoji, Permissions, Reaction,
     },
     snowflake::generate_snowflake,
     utoipa, Error, Maybe, NotFoundExt,
@@ -237,17 +241,22 @@ pub async fn create_message(
         None
     };
 
-    let mut db = get_pool();
+    let db = get_pool();
     let nonce = payload.nonce.take();
+
+    let mut transaction = db.begin().await?;
     let message_id = generate_snowflake(ModelType::Message, 0); // TODO: node id
-    let mut message = db
+    let mut message = transaction
         .create_message(channel_id, message_id, user_id, payload)
         .await?;
 
     if let Some(attachment) = attachment {
-        db.create_attachment(message_id, attachment.clone()).await?;
+        transaction
+            .create_attachment(message_id, attachment.clone())
+            .await?;
         message.attachments.push(attachment);
     }
+    transaction.commit().await?;
 
     #[cfg(feature = "ws")]
     let message_clone = message.clone();
@@ -307,7 +316,7 @@ pub async fn create_message(
     #[cfg(feature = "ws")]
     tokio::spawn(async move {
         // auto-ack the message
-        db.ack(user_id, channel_id, message_id).await?;
+        get_pool().ack(user_id, channel_id, message_id).await?;
 
         let mut message = message_clone;
         // TODO: this should be cached
@@ -578,6 +587,295 @@ async fn unpin_message(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Get Message Reactions
+///
+/// Fetches all reactions for a message. The reaction objects returned in the response will include
+/// the `created_at` field. If in a guild, this requires the `VIEW_CHANNEL` permission.
+#[utoipa::path(
+    get,
+    path = "/channels/{channel_id}/messages/{message_id}/reactions",
+    responses(
+        (status = OK, description = "Array of reaction objects", body = Vec<Reaction>),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = FORBIDDEN, description = "Missing permissions", body = Error),
+        (status = NOT_FOUND, description = "Channel or message not found", body = Error),
+    ),
+    security(("token" = [])),
+)]
+async fn get_message_reactions(
+    Auth(user_id, _): Auth,
+    Path((channel_id, message_id)): Path<(u64, u64)>,
+) -> RouteResult<Vec<Reaction>> {
+    maybe_assert_permissions(channel_id, user_id, Permissions::VIEW_CHANNEL).await?;
+
+    let reactions = get_pool().fetch_reactions(message_id).await?;
+    Ok(Response::ok(reactions))
+}
+
+async fn resolve_emoji(user_id: u64, emoji: String) -> essence::Result<PartialEmoji> {
+    if let Ok(id) = emoji.parse::<u64>() {
+        let db = get_pool();
+        let emoji = db
+            .fetch_emoji(id)
+            .await?
+            .ok_or_not_found("emoji", "emoji not found")?;
+        db.assert_member_in_guild(user_id, emoji.guild_id).await?;
+        Ok(emoji.into())
+    } else if get_emoji_lookup().contains_key(&emoji) {
+        Ok(PartialEmoji {
+            id: None,
+            name: emoji,
+        })
+    } else {
+        Err(Error::NotFound {
+            entity: "emoji".to_string(),
+            message: "emoji is malformed or this unicode emoji is not supported".to_string(),
+        })
+    }
+}
+
+/// Add Reaction
+///
+/// Adds a reaction to a message. If in a guild and the reaction does not exist, this will require
+/// the `ADD_REACTIONS` permission.
+///
+/// This endpoint is idempotent: if you have already reacted to this message with this emoji,
+/// nothing will happen.
+///
+/// The emoji path parameter should be either a literal unicode emoji or the ID of a custom emoji.
+#[utoipa::path(
+    put,
+    path = "/channels/{channel_id}/messages/{message_id}/reactions/{emoji}/me",
+    responses(
+        (status = NO_CONTENT, description = "Reaction added"),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = FORBIDDEN, description = "Missing permissions", body = Error),
+        (status = NOT_FOUND, description = "Channel, message, or emoji not found", body = Error),
+    ),
+    security(("token" = [])),
+)]
+async fn add_reaction(
+    Auth(user_id, _): Auth,
+    Path((channel_id, message_id, emoji)): Path<(u64, u64, String)>,
+) -> NoContentResult {
+    let emoji = resolve_emoji(user_id, emoji).await?;
+
+    let mut db = get_pool();
+    // If reaction already exists, fetch guild ID normally, otherwise fetch guild ID via asserting
+    // permissions
+    let guild_id = if db.reaction_exists(message_id, None, &emoji).await? {
+        db.inspect_channel(channel_id)
+            .await?
+            .ok_or_not_found("channel", "channel not found")?
+            .guild_id
+    } else {
+        maybe_assert_permissions(channel_id, user_id, Permissions::ADD_REACTIONS).await?
+    };
+
+    let added = db.add_reaction(message_id, user_id, &emoji).await?;
+    #[cfg(feature = "ws")]
+    if added {
+        amqp::publish_bulk_event(
+            guild_id.unwrap_or(channel_id),
+            OutboundMessage::ReactionAdd {
+                channel_id,
+                message_id,
+                user_id,
+                emoji,
+            },
+        )
+        .await?;
+    }
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Remove Own Reaction
+///
+/// Removes your own reaction from a message. This method is idempotent: if you try to remove a
+/// reaction that you haven't added, nothing will happen.
+///
+/// The emoji path parameter should be either a literal unicode emoji or the ID of a custom emoji.
+#[utoipa::path(
+    delete,
+    path = "/channels/{channel_id}/messages/{message_id}/reactions/{emoji}/me",
+    responses(
+        (status = NO_CONTENT, description = "Reaction removed"),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = NOT_FOUND, description = "Channel, message, or emoji not found", body = Error),
+    ),
+    security(("token" = [])),
+)]
+async fn remove_reaction(
+    Auth(user_id, _): Auth,
+    Path((channel_id, message_id, emoji)): Path<(u64, u64, String)>,
+) -> NoContentResult {
+    let emoji = resolve_emoji(user_id, emoji).await?;
+
+    let mut db = get_pool();
+    let removed = db.remove_reaction(message_id, user_id, &emoji).await?;
+
+    #[cfg(feature = "ws")]
+    if removed {
+        let guild_id = db
+            .inspect_channel(channel_id)
+            .await?
+            .ok_or_not_found("channel", "channel not found")?
+            .guild_id;
+
+        amqp::publish_bulk_event(
+            guild_id.unwrap_or(channel_id),
+            OutboundMessage::ReactionRemove {
+                channel_id,
+                message_id,
+                user_id,
+                moderator_id: None,
+                emoji,
+            },
+        )
+        .await?;
+    }
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Remove User Reaction
+///
+/// Forcibly removes a reaction by another user from a message. This requires the `MANAGE_MESSAGES`
+/// permission in the guild.
+///
+/// This method is idempotent: if you try to remove a reaction that doesn't exist, nothing will
+/// happen.
+///
+/// The emoji path parameter should be either a literal unicode emoji or the ID of a custom emoji.
+#[utoipa::path(
+    delete,
+    path = "/channels/{channel_id}/messages/{message_id}/reactions/{emoji}/{user_id}",
+    responses(
+        (status = NO_CONTENT, description = "Reaction removed"),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = FORBIDDEN, description = "Missing permissions", body = Error),
+        (status = NOT_FOUND, description = "Channel, message, or emoji not found", body = Error),
+    ),
+    security(("token" = [])),
+)]
+async fn remove_user_reaction(
+    Auth(user_id, _): Auth,
+    Path((channel_id, message_id, emoji, target_user_id)): Path<(u64, u64, String, u64)>,
+) -> NoContentResult {
+    let emoji = resolve_emoji(user_id, emoji).await?;
+
+    let mut db = get_pool();
+    let guild_id = maybe_assert_permissions(channel_id, user_id, Permissions::MANAGE_MESSAGES)
+        .await?
+        .ok_or_else(|| Error::GuildOnly {
+            message: String::from("Channel must be in a guild"),
+        })?;
+
+    let removed = db
+        .remove_reaction(message_id, target_user_id, &emoji)
+        .await?;
+
+    #[cfg(feature = "ws")]
+    if removed {
+        amqp::publish_bulk_event(
+            guild_id,
+            OutboundMessage::ReactionRemove {
+                channel_id,
+                message_id,
+                user_id: target_user_id,
+                moderator_id: Some(user_id),
+                emoji,
+            },
+        )
+        .await?;
+    }
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+async fn bulk_remove_reactions(
+    user_id: u64,
+    channel_id: u64,
+    message_id: u64,
+    emoji: Option<PartialEmoji>,
+) -> essence::Result<()> {
+    let mut db = get_pool();
+    let guild_id = maybe_assert_permissions(channel_id, user_id, Permissions::MANAGE_MESSAGES)
+        .await?
+        .ok_or_else(|| Error::GuildOnly {
+            message: String::from("Channel must be in a guild"),
+        })?;
+
+    db.bulk_remove_reactions(message_id, emoji.as_ref()).await?;
+
+    #[cfg(feature = "ws")]
+    amqp::publish_bulk_event(
+        guild_id,
+        OutboundMessage::ReactionRemoveBulk {
+            channel_id,
+            message_id,
+            moderator_id: user_id,
+            emoji,
+        },
+    )
+    .await?;
+
+    Ok(())
+}
+
+/// Remove All Reactions for Emoji
+///
+/// Removes all reactions for a given emoji from a message. This requires the `MANAGE_MESSAGES`
+/// permission in the guild.
+///
+/// The emoji path parameter should be either a literal unicode emoji or the ID of a custom emoji.
+#[utoipa::path(
+    delete,
+    path = "/channels/{channel_id}/messages/{message_id}/reactions/{emoji}",
+    responses(
+        (status = NO_CONTENT, description = "Reactions removed"),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = FORBIDDEN, description = "Missing permissions", body = Error),
+        (status = NOT_FOUND, description = "Channel, message, or emoji not found", body = Error),
+    ),
+    security(("token" = [])),
+)]
+async fn remove_all_reactions_for_emoji(
+    Auth(user_id, _): Auth,
+    Path((channel_id, message_id, emoji)): Path<(u64, u64, String)>,
+) -> NoContentResult {
+    let emoji = resolve_emoji(user_id, emoji).await?;
+    bulk_remove_reactions(user_id, channel_id, message_id, Some(emoji)).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Clear Reactions
+///
+/// Removes all reactions from a message. This requires the `MANAGE_MESSAGES` permission in the
+/// guild.
+///
+/// This method is idempotent: if you try to remove reactions from a message that has no reactions,
+/// nothing will happen.
+#[utoipa::path(
+    delete,
+    path = "/channels/{channel_id}/messages/{message_id}/reactions",
+    responses(
+        (status = NO_CONTENT, description = "Reactions removed"),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = FORBIDDEN, description = "Missing permissions", body = Error),
+        (status = NOT_FOUND, description = "Channel or message not found", body = Error),
+    ),
+    security(("token" = [])),
+)]
+async fn clear_reactions(
+    Auth(user_id, _): Auth,
+    Path((channel_id, message_id)): Path<(u64, u64)>,
+) -> NoContentResult {
+    bulk_remove_reactions(user_id, channel_id, message_id, None).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub fn router() -> Router {
     Router::new()
         .route(
@@ -594,5 +892,23 @@ pub fn router() -> Router {
         .route(
             "/channels/:channel_id/messages/:message_id/pin",
             put(pin_message.layer(ratelimit!(5, 5))).delete(unpin_message.layer(ratelimit!(5, 5))),
+        )
+        .route(
+            "/channels/:channel_id/messages/:message_id/reactions",
+            get(get_message_reactions.layer(ratelimit!(5, 5)))
+                .delete(clear_reactions.layer(ratelimit!(5, 5))),
+        )
+        .route(
+            "/channels/:channel_id/messages/:message_id/reactions/:emoji",
+            delete(remove_all_reactions_for_emoji.layer(ratelimit!(5, 5))),
+        )
+        .route(
+            "/channels/:channel_id/messages/:message_id/reactions/:emoji/me",
+            put(add_reaction.layer(ratelimit!(10, 10)))
+                .delete(remove_reaction.layer(ratelimit!(10, 10))),
+        )
+        .route(
+            "/channels/:channel_id/messages/:message_id/reactions/:emoji/:user_id",
+            delete(remove_user_reaction.layer(ratelimit!(10, 10))),
         )
 }

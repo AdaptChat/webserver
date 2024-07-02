@@ -14,7 +14,7 @@ const CDN_AUTHORIZATION: &str = dotenv!(
     "CDN_AUTHORIZATION",
     "missing CDN_AUTHORIZATION environment variable"
 );
-static CLIENT: OnceLock<Client> = OnceLock::new();
+pub(crate) static CLIENT: OnceLock<Client> = OnceLock::new();
 
 trait CdnResponse: DeserializeOwned {}
 

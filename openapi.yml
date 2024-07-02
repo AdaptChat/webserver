@@ -814,6 +814,330 @@ paths:
                 $ref: '#/components/schemas/Error'
       security:
       - token: []
+  /channels/{channel_id}/messages/{message_id}/reactions:
+    get:
+      tags:
+      - messages
+      summary: Get Message Reactions
+      description: |-
+        Fetches all reactions for a message. The reaction objects returned in the response will include
+        the `created_at` field. If in a guild, this requires the `VIEW_CHANNEL` permission.
+      operationId: get_message_reactions
+      parameters:
+      - name: channel_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: message_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      responses:
+        '200':
+          description: Array of reaction objects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reaction'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel or message not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
+    delete:
+      tags:
+      - messages
+      summary: Clear Reactions
+      description: |-
+        Removes all reactions from a message. This requires the `MANAGE_MESSAGES` permission in the
+        guild.
+
+        This method is idempotent: if you try to remove reactions from a message that has no reactions,
+        nothing will happen.
+      operationId: clear_reactions
+      parameters:
+      - name: channel_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: message_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      responses:
+        '204':
+          description: Reactions removed
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel or message not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
+  /channels/{channel_id}/messages/{message_id}/reactions/{emoji}:
+    delete:
+      tags:
+      - messages
+      summary: Remove All Reactions for Emoji
+      description: |-
+        Removes all reactions for a given emoji from a message. This requires the `MANAGE_MESSAGES`
+        permission in the guild.
+
+        The emoji path parameter should be either a literal unicode emoji or the ID of a custom emoji.
+      operationId: remove_all_reactions_for_emoji
+      parameters:
+      - name: channel_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: message_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: emoji
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Reactions removed
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel, message, or emoji not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
+  /channels/{channel_id}/messages/{message_id}/reactions/{emoji}/me:
+    put:
+      tags:
+      - messages
+      summary: Add Reaction
+      description: |-
+        Adds a reaction to a message. If in a guild and the reaction does not exist, this will require
+        the `ADD_REACTIONS` permission.
+
+        This endpoint is idempotent: if you have already reacted to this message with this emoji,
+        nothing will happen.
+
+        The emoji path parameter should be either a literal unicode emoji or the ID of a custom emoji.
+      operationId: add_reaction
+      parameters:
+      - name: channel_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: message_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: emoji
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Reaction added
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel, message, or emoji not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
+    delete:
+      tags:
+      - messages
+      summary: Remove Own Reaction
+      description: |-
+        Removes your own reaction from a message. This method is idempotent: if you try to remove a
+        reaction that you haven't added, nothing will happen.
+
+        The emoji path parameter should be either a literal unicode emoji or the ID of a custom emoji.
+      operationId: remove_reaction
+      parameters:
+      - name: channel_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: message_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: emoji
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Reaction removed
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel, message, or emoji not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
+  /channels/{channel_id}/messages/{message_id}/reactions/{emoji}/{user_id}:
+    delete:
+      tags:
+      - messages
+      summary: Remove User Reaction
+      description: |-
+        Forcibly removes a reaction by another user from a message. This requires the `MANAGE_MESSAGES`
+        permission in the guild.
+
+        This method is idempotent: if you try to remove a reaction that doesn't exist, nothing will
+        happen.
+
+        The emoji path parameter should be either a literal unicode emoji or the ID of a custom emoji.
+      operationId: remove_user_reaction
+      parameters:
+      - name: channel_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: message_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: emoji
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      responses:
+        '204':
+          description: Reaction removed
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel, message, or emoji not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
   /emojis/{emoji_id}:
     get:
       tags:
@@ -1406,7 +1730,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateEmojiPayload'
+              $ref: '#/components/schemas/EditEmojiPayload'
         required: true
       responses:
         '200':
@@ -3861,6 +4185,19 @@ components:
             enum:
             - not_found
       - type: object
+        description: This operation is only allowed in guilds.
+        required:
+        - message
+        - type
+        properties:
+          message:
+            type: string
+            description: The error message.
+          type:
+            type: string
+            enum:
+            - guild_only
+      - type: object
         description: Tried authorizing a bot account with anything but an authentication token.
         required:
         - message
@@ -4734,7 +5071,7 @@ components:
         - embeds
         - attachments
         - flags
-        - stars
+        - reactions
         - mentions
         - references
         properties:
@@ -4796,16 +5133,16 @@ components:
               Note: Users or roles will stay in this list even if they are deleted. This represents those
               that were mentioned at the time the message was sent. That is, there is no guarantee that
               all of these IDs will resolve to a user or role!
+          reactions:
+            type: array
+            items:
+              $ref: '#/components/schemas/Reaction'
+            description: The reactions received on this message.
           references:
             type: array
             items:
               $ref: '#/components/schemas/MessageReference'
             description: A list of messages that this message references.
-          stars:
-            type: integer
-            format: int32
-            description: The amount of stars this message has received.
-            minimum: 0
       description: Represents a text or system message in a channel.
     MessageEmbedFieldAlignment:
       type: string
