@@ -612,14 +612,16 @@ async fn get_message_reactions(
     Ok(Response::ok(reactions))
 }
 
-async fn resolve_emoji(user_id: u64, emoji: String) -> essence::Result<PartialEmoji> {
+async fn resolve_emoji(user_id: Option<u64>, emoji: String) -> essence::Result<PartialEmoji> {
     if let Ok(id) = emoji.parse::<u64>() {
         let db = get_pool();
         let emoji = db
             .fetch_emoji(id)
             .await?
             .ok_or_not_found("emoji", "emoji not found")?;
-        db.assert_member_in_guild(user_id, emoji.guild_id).await?;
+        if let Some(user_id) = user_id {
+            db.assert_member_in_guild(user_id, emoji.guild_id).await?;
+        }
         Ok(emoji.into())
     } else if get_emoji_lookup().contains_key(&emoji) {
         Ok(PartialEmoji {
@@ -658,7 +660,7 @@ async fn add_reaction(
     Auth(user_id, _): Auth,
     Path((channel_id, message_id, emoji)): Path<(u64, u64, String)>,
 ) -> NoContentResult {
-    let emoji = resolve_emoji(user_id, emoji).await?;
+    let emoji = resolve_emoji(Some(user_id), emoji).await?;
 
     let mut db = get_pool();
     // If reaction already exists, fetch guild ID normally, otherwise fetch guild ID via asserting
@@ -710,7 +712,7 @@ async fn remove_reaction(
     Auth(user_id, _): Auth,
     Path((channel_id, message_id, emoji)): Path<(u64, u64, String)>,
 ) -> NoContentResult {
-    let emoji = resolve_emoji(user_id, emoji).await?;
+    let emoji = resolve_emoji(None, emoji).await?;
 
     let mut db = get_pool();
     let removed = db.remove_reaction(message_id, user_id, &emoji).await?;
@@ -763,7 +765,7 @@ async fn remove_user_reaction(
     Auth(user_id, _): Auth,
     Path((channel_id, message_id, emoji, target_user_id)): Path<(u64, u64, String, u64)>,
 ) -> NoContentResult {
-    let emoji = resolve_emoji(user_id, emoji).await?;
+    let emoji = resolve_emoji(None, emoji).await?;
 
     let mut db = get_pool();
     let guild_id = maybe_assert_permissions(channel_id, user_id, Permissions::MANAGE_MESSAGES)
@@ -845,7 +847,7 @@ async fn remove_all_reactions_for_emoji(
     Auth(user_id, _): Auth,
     Path((channel_id, message_id, emoji)): Path<(u64, u64, String)>,
 ) -> NoContentResult {
-    let emoji = resolve_emoji(user_id, emoji).await?;
+    let emoji = resolve_emoji(None, emoji).await?;
     bulk_remove_reactions(user_id, channel_id, message_id, Some(emoji)).await?;
     Ok(StatusCode::NO_CONTENT)
 }
