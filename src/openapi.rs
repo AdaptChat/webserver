@@ -74,6 +74,7 @@ use essence::{
         messages::add_reaction,
         messages::remove_reaction,
         messages::remove_user_reaction,
+        emojis::list_unicode_emojis,
         emojis::get_emoji,
         emojis::list_guild_emojis,
         emojis::create_emoji,

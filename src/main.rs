@@ -73,7 +73,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/teapot", get(|| async { StatusCode::IM_A_TEAPOT }))
         .merge(routes::auth::router())
         .merge(routes::channels::router())
-        // TODO: Add emojis router when ready.
+        .merge(routes::emojis::router())
         .merge(routes::guilds::router())
         .merge(routes::internal::router())
         .merge(routes::invites::router())

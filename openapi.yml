@@ -1138,6 +1138,26 @@ paths:
                 $ref: '#/components/schemas/Error'
       security:
       - token: []
+  /emojis:
+    get:
+      tags:
+      - emojis
+      summary: List Unicode Emojis
+      description: |-
+        Lists all supported unicode emojis. This endpoint does not require authentication.
+
+        The data returned from this endpoint is extracted and up to date with GitHub's
+        [genmoji](https://github.com/github/gemoji/blob/master/db/emoji.json).
+      operationId: list_unicode_emojis
+      responses:
+        '200':
+          description: List of unicode emojis
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EmojiData'
   /emojis/{emoji_id}:
     get:
       tags:
