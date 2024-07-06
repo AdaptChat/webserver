@@ -59,7 +59,7 @@ pub(crate) async fn handle_accept_header(request: Request, next: Next) -> AxumRe
         #[allow(clippy::single_match_else)]
         let (mimetype, body) = match accept.as_deref() {
             Some(b"msgpack" | b"application/msgpack" | b"application/x-msgpack") => {
-                let bytes = match rmp_serde::to_vec(&body) {
+                let bytes = match rmp_serde::to_vec_named(&body) {
                     Ok(bytes) => bytes,
                     Err(err) => {
                         return serialization_error(&err);
