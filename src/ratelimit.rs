@@ -53,6 +53,11 @@ impl<S> Ratelimit<S> {
         headers.insert("X-RateLimit-Per", per.to_string().parse().unwrap());
     }
 
+    #[inline]
+    const fn tokens_per_second(&self) -> f32 {
+        self.rate as f32 / self.per as f32
+    }
+
     #[allow(
         clippy::cast_lossless,
         clippy::cast_possible_truncation,
@@ -66,8 +71,7 @@ impl<S> Ratelimit<S> {
             .or_insert_with(|| Bucket::new(self.rate, now));
 
         let elapsed = now.duration_since(bucket.last_refill);
-        let tokens_to_add =
-            (elapsed.as_secs_f32() * (self.rate as f32 / self.per as f32)).floor() as u16;
+        let tokens_to_add = (elapsed.as_secs_f32() * self.tokens_per_second()).floor() as u16;
         if tokens_to_add > 0 {
             bucket.tokens = (bucket.tokens + tokens_to_add).min(self.rate);
             bucket.last_refill = now;
@@ -76,9 +80,9 @@ impl<S> Ratelimit<S> {
         if bucket.tokens == 0 {
             // when the next token will be available?
             let time_until_next_token = Duration::from_secs_f32(
-                (self.per as f32 / self.rate as f32)
+                self.tokens_per_second()
                     - (now.duration_since(bucket.last_refill).as_secs_f32()
-                        % (self.per as f32 / self.rate as f32)),
+                        % self.tokens_per_second()),
             );
             let retry_after = time_until_next_token;
 
