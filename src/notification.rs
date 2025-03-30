@@ -82,7 +82,7 @@ async fn get_client() -> &'static Client {
 
 #[allow(clippy::must_use_candidate)]
 pub fn start_workers<const N: usize>() -> [JoinHandle<()>; N] {
-    let mut handles = MaybeUninit::uninit_array::<N>();
+    let mut handles = [const { MaybeUninit::uninit() }; N];
     for handle in &mut handles {
         handle.write(tokio::spawn(worker()));
     }
@@ -136,14 +136,13 @@ async fn worker() {
                         }
                         429 | 500 | 503 => {
                             warn!("abnormal status {status_code}: {body}, retrying");
-                            continue;
                         }
                         _ => {
                             info!("unknown status code {status_code}: {body}, ignoring.");
                             break;
                         }
                     },
-                    Err(Error::Timeout) => continue,
+                    Err(Error::Timeout) => (),
                     _ => break,
                 }
             }

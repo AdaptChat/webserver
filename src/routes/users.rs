@@ -256,7 +256,7 @@ pub async fn get_client_user(Auth(id, _): Auth) -> RouteResult<ClientUser> {
     Ok(Response::ok(user))
 }
 
-async fn _edit_user<'a, D>(
+async fn raw_edit_user<'a, D>(
     db: &mut D,
     id: u64,
     mut payload: EditUserPayload,
@@ -323,7 +323,7 @@ pub async fn edit_user(
     )?;
 
     let mut db = get_pool();
-    let after = _edit_user(&mut db, id, payload).await?;
+    let after = raw_edit_user(&mut db, id, payload).await?;
     Ok(Response::ok(after))
 }
 
@@ -782,7 +782,7 @@ pub async fn edit_bot(
     db.assert_user_owns_bot(user_id, bot_id).await?;
 
     let mut transaction = db.begin().await?;
-    let user = _edit_user(&mut transaction, bot_id, payload.user_payload.clone()).await?;
+    let user = raw_edit_user(&mut transaction, bot_id, payload.user_payload.clone()).await?;
     let after = transaction.edit_bot(user, payload).await?;
     transaction.commit().await?;
 

@@ -8,7 +8,11 @@ pub const CACHE_PATH: &str = "emoji_cache.json";
 
 pub static EMOJI_LOOKUP: OnceLock<HashMap<String, EmojiData>> = OnceLock::new();
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+mod utoipa {
+    pub use essence::utoipa::*;
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct EmojiData {
     pub emoji: String,
     pub description: String,

@@ -53,7 +53,7 @@ where
         let token = parts
             .headers
             .get("Authorization")
-            .ok_or(Error::InvalidToken {
+            .ok_or_else(|| Error::InvalidToken {
                 message: String::from(
                     "missing `Authorization` header, which should contain the token",
                 ),
@@ -63,13 +63,12 @@ where
                 message: "Invalid Authorization header".to_string(),
             })?;
 
-        let (id, flags) =
-            get_pool()
-                .fetch_user_info_by_token(token)
-                .await?
-                .ok_or(Error::InvalidToken {
-                    message: "Invalid authorization token".to_string(),
-                })?;
+        let (id, flags) = get_pool()
+            .fetch_user_info_by_token(token)
+            .await?
+            .ok_or_else(|| Error::InvalidToken {
+                message: "Invalid authorization token".to_string(),
+            })?;
 
         Ok(Self(id, flags))
     }

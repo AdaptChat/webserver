@@ -24,18 +24,16 @@ use tokio::time::Instant;
 
 #[derive(Clone, Debug, Hash)]
 pub struct Bucket {
-    pub count: u16,
-    pub reset: Instant,
-    pub previous: Option<Instant>,
+    pub tokens: u16,
+    pub last_refill: Instant,
 }
 
 impl Bucket {
     #[must_use]
-    pub const fn new(count: u16, reset: Instant) -> Self {
+    pub const fn new(tokens: u16, last_refill: Instant) -> Self {
         Self {
-            count,
-            reset,
-            previous: None,
+            tokens,
+            last_refill,
         }
     }
 }
@@ -58,7 +56,8 @@ impl<S> Ratelimit<S> {
     #[allow(
         clippy::cast_lossless,
         clippy::cast_possible_truncation,
-        clippy::cast_sign_loss
+        clippy::cast_sign_loss,
+        clippy::result_large_err
     )]
     fn handle_ratelimit(&self, ip: IpAddr, now: Instant) -> Result<u16, AxumResponse> {
         let mut bucket = self
@@ -66,8 +65,22 @@ impl<S> Ratelimit<S> {
             .entry(ip)
             .or_insert_with(|| Bucket::new(self.rate, now));
 
-        if bucket.reset > now {
-            let retry_after = bucket.reset.duration_since(now);
+        let elapsed = now.duration_since(bucket.last_refill);
+        let tokens_to_add =
+            (elapsed.as_secs_f32() * (self.rate as f32 / self.per as f32)).floor() as u16;
+        if tokens_to_add > 0 {
+            bucket.tokens = (bucket.tokens + tokens_to_add).min(self.rate);
+            bucket.last_refill = now;
+        }
+
+        if bucket.tokens == 0 {
+            // when the next token will be available?
+            let time_until_next_token = Duration::from_secs_f32(
+                (self.per as f32 / self.rate as f32)
+                    - (now.duration_since(bucket.last_refill).as_secs_f32()
+                        % (self.per as f32 / self.rate as f32)),
+            );
+            let retry_after = time_until_next_token;
 
             let mut response = Response::from(Error::Ratelimited {
                 retry_after: retry_after.as_secs_f32(),
@@ -87,22 +100,8 @@ impl<S> Ratelimit<S> {
             return Err(response);
         }
 
-        let elapsed = bucket.previous.map_or(Duration::from_secs(0), |previous| {
-            previous.duration_since(now)
-        });
-
-        // Replenish missed tokens into the bucket
-        let unit = self.per as f32 / self.rate as f32;
-        let count = (elapsed.as_secs_f32() / unit).floor() as u16;
-        bucket.count = (bucket.count + count).min(self.rate) - 1;
-
-        if bucket.count == 0 {
-            bucket.count = self.rate;
-            bucket.reset = bucket.previous.unwrap_or(now) + Duration::from_secs(self.per as u64);
-        }
-
-        bucket.previous = Some(now);
-        Ok(bucket.count)
+        bucket.tokens -= 1;
+        Ok(bucket.tokens)
     }
 }
 
@@ -228,7 +227,7 @@ macro_rules! ratelimit {
     ($rate:expr, $per:expr) => {{
         tower::ServiceBuilder::new()
             .layer(axum::error_handling::HandleErrorLayer::new(|_| async {
-                unreachable!()
+                axum::response::Response::new(axum::body::Body::empty())
             }))
             .layer(tower::buffer::BufferLayer::new(1024))
             .layer(crate::ratelimit::RatelimitLayer::new($rate, $per))

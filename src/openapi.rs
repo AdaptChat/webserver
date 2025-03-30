@@ -1,4 +1,7 @@
-use crate::routes::{auth, channels, emojis, guilds, invites, members, messages, roles, users};
+use crate::{
+    routes::{auth, channels, emojis, guilds, invites, members, messages, roles, users},
+    unicode::EmojiData,
+};
 use essence::{
     http, models,
     utoipa::{
@@ -145,6 +148,7 @@ use essence::{
         models::PermissionPair,
         models::CustomEmoji,
         models::PartialEmoji,
+        EmojiData,
         models::Reaction,
         models::Role,
         models::RoleFlags,

@@ -1,3 +1,5 @@
+#![allow(clippy::used_underscore_items)]
+
 use bincode::Encode;
 use deadpool_lapin::{
     lapin::{
@@ -48,8 +50,8 @@ pub async fn get_pool() -> Object {
         .expect("unable to get amqp pool")
 }
 
-async fn _publish<'a>(
-    channel: &'a Channel,
+async fn _publish(
+    channel: &Channel,
     exchange: &str,
     kind: ExchangeKind,
     auto_delete: bool,

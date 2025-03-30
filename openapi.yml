@@ -443,6 +443,18 @@ paths:
           format: int64
           nullable: true
           minimum: 0
+      - name: around
+        in: query
+        description: |-
+          If specified, messages will be fetched centered around this message ID, with equal padding
+          on both sides up to the limit. If there are not enough messages on either side, the results
+          will be cut off on that side.
+        required: false
+        schema:
+          type: integer
+          format: int64
+          nullable: true
+          minimum: 0
       - name: limit
         in: query
         description: |-
@@ -465,8 +477,7 @@ paths:
       - name: oldest_first
         in: query
         description: |-
-          Whether or not to query messages starting from the oldest message first. Defaults to
-          ``false``.
+          Whether to query messages starting from the oldest message first. Defaults to ``false``.
 
           If ``true``, messages will be sorted from oldest to newest. If ``false``, messages will be
           sorted from newest to oldest.
@@ -1217,6 +1228,12 @@ paths:
       - name: roles
         in: query
         description: Whether to resolve the guild's roles in the response.
+        required: false
+        schema:
+          type: boolean
+      - name: emojis
+        in: query
+        description: Whether to resolve the guild's emojis in the response.
         required: false
         schema:
           type: boolean
@@ -4107,6 +4124,38 @@ components:
       - image
       - video
       - meta
+    EmojiData:
+      type: object
+      required:
+      - emoji
+      - description
+      - category
+      - aliases
+      - tags
+      - unicode_version
+      - ios_version
+      properties:
+        aliases:
+          type: array
+          items:
+            type: string
+        category:
+          type: string
+        description:
+          type: string
+        emoji:
+          type: string
+        ios_version:
+          type: string
+        skin_tones:
+          type: boolean
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        unicode_version:
+          type: string
     Error:
       oneOf:
       - type: object
@@ -4694,6 +4743,19 @@ components:
               $ref: '#/components/schemas/GuildChannel'
             description: |-
               A list of resolved channels in the guild.
+
+              This is only available during the following events:
+              * Fetching the guild directly
+              * The client retrieves the response after a request to join a guild through an invite
+              * The client receives a ready event containing all guild data through the gateway.
+              * The client receives a guild create event through the gateway.
+            nullable: true
+          emojis:
+            type: array
+            items:
+              $ref: '#/components/schemas/CustomEmoji'
+            description: |-
+              A list of resolved emojis in the guild.
 
               This is only available during the following events:
               * Fetching the guild directly

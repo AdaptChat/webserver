@@ -7,7 +7,6 @@
 )]
 #![cfg_attr(not(feature = "ws"), allow(unused_variables, unused_imports))]
 #![feature(try_blocks)]
-#![feature(maybe_uninit_uninit_array)]
 #![feature(maybe_uninit_array_assume_init)]
 
 #[macro_use]

@@ -332,7 +332,7 @@ pub async fn delete_role(
     db.delete_role(guild_id, role_id).await?;
 
     #[cfg(feature = "ws")]
-    amqp::publish_bulk_event(guild_id, OutboundMessage::RoleDelete { role_id }).await?;
+    amqp::publish_bulk_event(guild_id, OutboundMessage::RoleDelete { guild_id, role_id }).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

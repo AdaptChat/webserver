@@ -612,6 +612,7 @@ async fn get_message_reactions(
     Ok(Response::ok(reactions))
 }
 
+#[allow(clippy::map_entry)] // false positive
 async fn resolve_emoji(user_id: Option<u64>, emoji: String) -> essence::Result<PartialEmoji> {
     if let Ok(id) = emoji.parse::<u64>() {
         let db = get_pool();
