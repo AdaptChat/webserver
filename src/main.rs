@@ -84,7 +84,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(axum::middleware::from_fn(response::handle_accept_header))
         .layer(CorsLayer::permissive());
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8077));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8077));
     let listener = TcpListener::bind(addr).await?;
     axum::serve(
         listener,
