@@ -14,13 +14,15 @@ use axum::{
     routing::{get, put},
     Router,
 };
+#[cfg(feature = "ws")]
+use essence::ws::GuildChannelPosition;
 use essence::{
     cache::ChannelInspection,
     db::{get_pool, ChannelDbExt, GuildDbExt, RoleDbExt, UserDbExt},
     error::UserInteractionType,
     http::channel::{
         CreateDmChannelPayload, CreateGuildChannelInfo, CreateGuildChannelPayload,
-        EditChannelPayload,
+        EditChannelPayload, EditChannelPositionsPayload,
     },
     models::{
         Channel, ChannelType, DmChannel, GuildChannel, ModelType, PermissionOverwrite, Permissions,
@@ -336,6 +338,71 @@ pub async fn create_guild_channel(
     .await?;
 
     Ok(Response::created(channel))
+}
+
+/// Edit Guild Channel Positions
+///
+/// Modifies the positions of channels in a guild. You must have the `MANAGE_CHANNELS` permission to
+/// use this endpoint.
+///
+/// You must specify all channels that will have a new absolute position, and there is no automatic
+/// normalization/shifting of positions. You must ensure that after overwriting the positions of the
+/// specified channels, all channels in the guild have a valid position.
+///
+/// For example, if you want to swap the positions of two channels, you must specify the new desired
+/// positions for _both_ channels. If you want to move a channel from the top of a category to the
+/// bottom, you must specify new positions for every single channel in that category because their
+/// positions would be shifted.
+///
+/// Channel positions are scoped by category (or lack thereof), and categories themselves take their
+/// own scope, separate from normal channels. The positioning restrictions are as follows:
+/// - No two channels in a positioning scope may have the same position.
+/// - No gap in positions may exist in a positioning scope.
+/// - The lowest position in a positioning scope is always 0.
+///
+/// This means that a positioning scope with N channels must have all integer positions from
+/// 0 to _N-1_.
+#[utoipa::path(
+    patch,
+    path = "/guilds/{guild_id}/channels",
+    request_body = Vec<EditChannelPositionPayload>,
+    responses(
+        (status = NO_CONTENT, description = "Channel positions updated"),
+        (status = BAD_REQUEST, description = "Invalid payload", body = Error),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = FORBIDDEN, description = "Missing permissions", body = Error),
+        (status = NOT_FOUND, description = "Guild or channel not found", body = Error),
+    ),
+    security(("token" = [])),
+)]
+pub async fn edit_guild_channel_positions(
+    Auth(user_id, _): Auth,
+    Path(guild_id): Path<u64>,
+    Json(payload): Json<EditChannelPositionsPayload>,
+) -> NoContentResult {
+    let mut db = get_pool();
+    db.assert_member_has_permissions(guild_id, user_id, None, Permissions::MANAGE_CHANNELS)
+        .await?;
+    let positions = db.edit_guild_channel_positions(guild_id, &payload).await?;
+
+    #[cfg(feature = "ws")]
+    amqp::publish_bulk_event(
+        guild_id,
+        OutboundMessage::GuildChannelPositionsUpdate {
+            guild_id,
+            positions: positions
+                .into_iter()
+                .map(|(id, position, parent_id)| GuildChannelPosition {
+                    channel_id: id,
+                    position,
+                    parent_id,
+                })
+                .collect(),
+        },
+    )
+        .await?;
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Get Channel
@@ -675,7 +742,8 @@ pub fn router() -> Router {
         .route(
             "/guilds/:guild_id/channels",
             get(get_guild_channels.layer(ratelimit!(5, 5)))
-                .post(create_guild_channel.layer(ratelimit!(5, 5))),
+                .post(create_guild_channel.layer(ratelimit!(5, 7)))
+                .patch(edit_guild_channel_positions.layer(ratelimit!(2, 8))),
         )
         .route(
             "/users/me/channels",

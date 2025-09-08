@@ -1584,6 +1584,77 @@ paths:
                 $ref: '#/components/schemas/Error'
       security:
       - token: []
+    patch:
+      tags:
+      - channels
+      summary: Edit Guild Channel Positions
+      description: |-
+        Modifies the positions of channels in a guild. You must have the `MANAGE_CHANNELS` permission to
+        use this endpoint.
+
+        You must specify all channels that will have a new absolute position, and there is no automatic
+        normalization/shifting of positions. You must ensure that after overwriting the positions of the
+        specified channels, all channels in the guild have a valid position.
+
+        For example, if you want to swap the positions of two channels, you must specify the new desired
+        positions for _both_ channels. If you want to move a channel from the top of a category to the
+        bottom, you must specify new positions for every single channel in that category because their
+        positions would be shifted.
+
+        Channel positions are scoped by category (or lack thereof), and categories themselves take their
+        own scope, separate from normal channels. The positioning restrictions are as follows:
+        - No two channels in a positioning scope may have the same position.
+        - No gap in positions may exist in a positioning scope.
+        - The lowest position in a positioning scope is always 0.
+
+        This means that a positioning scope with N channels must have all integer positions from
+        0 to _N-1_.
+      operationId: edit_guild_channel_positions
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/EditChannelPositionPayload'
+        required: true
+      responses:
+        '204':
+          description: Channel positions updated
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild or channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
   /guilds/{guild_id}/emojis:
     get:
       tags:
@@ -3276,7 +3347,7 @@ components:
             $ref: '#/components/schemas/PrivacyConfiguration'
           notification_override:
             type: object
-            description: A map for notification settings override.
+            description: A map of notification overrides.
             additionalProperties:
               $ref: '#/components/schemas/NotificationFlags'
           onboarding_flags:
@@ -3836,6 +3907,42 @@ components:
             current limit, if there is any. Only takes effect for guild voice channels.
           nullable: true
           minimum: 0
+    EditChannelPositionPayload:
+      type: object
+      description: The payload used per channel to specify its new position data.
+      required:
+      - id
+      - position
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: The ID of the channel to modify.
+          minimum: 0
+        parent_id:
+          type: integer
+          format: int64
+          description: |-
+            The new parent category of the channel. If left blank, the scope will not be changed.
+            If set to `Null`, the channel will be moved to the root of the channel list.
+          nullable: true
+          minimum: 0
+        position:
+          type: integer
+          format: int32
+          description: The new position of the channel.
+          minimum: 0
+    EditChannelPositionsPayload:
+      type: object
+      description: The request body sent to modify channel positions.
+      required:
+      - positions
+      properties:
+        positions:
+          type: array
+          items:
+            $ref: '#/components/schemas/EditChannelPositionPayload'
+          description: A list of channel positions to modify.
     EditClientMemberPayload:
       type: object
       description: The payload send to edit the authenticated user as a member.
