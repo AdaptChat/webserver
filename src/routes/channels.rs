@@ -400,7 +400,7 @@ pub async fn edit_guild_channel_positions(
                 .collect(),
         },
     )
-        .await?;
+    .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

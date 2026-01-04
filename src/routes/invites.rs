@@ -10,7 +10,7 @@ use axum::{
     extract::{Path, Query},
     handler::Handler,
     http::StatusCode,
-    routing::get,
+    routing::{delete, get},
     Router,
 };
 use essence::{
@@ -222,8 +222,11 @@ pub fn router() -> Router {
         .route(
             "/guilds/:guild_id/invites",
             get(get_guild_invites.layer(ratelimit!(4, 8)))
-                .post(create_guild_invite.layer(ratelimit!(3, 8)))
-                .delete(delete_guild_invite.layer(ratelimit!(3, 8))),
+                .post(create_guild_invite.layer(ratelimit!(3, 8))),
+        )
+        .route(
+            "/guilds/:guild_id/invites/:code",
+            delete(delete_guild_invite.layer(ratelimit!(3, 8))),
         )
         .route(
             "/invites/:code",
