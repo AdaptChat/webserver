@@ -118,7 +118,8 @@ pub async fn get_all_guilds(
     Query(query): Query<GetGuildQuery>,
 ) -> RouteResult<Vec<Guild>> {
     let db = get_pool();
-    let guilds = db.fetch_all_guilds_for_user(user_id, query).await?;
+    let partial_guilds = db.fetch_partial_guilds_for_user(user_id, None).await?;
+    let guilds = db.fetch_all_guilds_for_user(partial_guilds, query).await?;
 
     Ok(Response::ok(guilds))
 }
