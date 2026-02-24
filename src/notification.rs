@@ -68,6 +68,8 @@ struct NotificationTask {
 async fn get_client() -> &'static Client {
     FCM_CLIENT
         .get_or_init(|| async {
+            let project_id =
+                std::env::var("GOOGLE_FCM_PROJECT_ID").unwrap_or_else(|_| "adapt-chat".to_string());
             let auth = Authenticator::service_account_from_file(
                 std::env::var("GOOGLE_APPLICATION_CREDENTIALS")
                     .expect("missing google application credentials"),
@@ -75,7 +77,7 @@ async fn get_client() -> &'static Client {
             .await
             .expect("failed auth");
 
-            Client::new(auth, "adapt-chat", false, Duration::from_secs(5))
+            Client::new(auth, &project_id, false, Duration::from_secs(5))
         })
         .await
 }

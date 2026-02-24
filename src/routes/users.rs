@@ -35,8 +35,8 @@ use essence::{
 };
 use serde::{Deserialize, Serialize};
 
-static TURNSTILE_SECRET_KEY: LazyLock<String> =
-    LazyLock::new(|| std::env::var("TURNSTILE_SECRET_KEY").expect("missing TURNSTILE_SECRET_KEY"));
+static TURNSTILE_SECRET_KEY: LazyLock<Option<String>> =
+    LazyLock::new(|| std::env::var("TURNSTILE_SECRET_KEY").ok());
 
 fn validate_username_esque(username: &str, field: &str) -> Result<(), Error> {
     let length = username.chars().count();
@@ -139,10 +139,14 @@ pub async fn check_username(Path(username): Path<String>) -> RouteResult<()> {
 }
 
 async fn validate_captcha(token: String, ip: Option<String>) -> Result<(), Error> {
+    let Some(key) = TURNSTILE_SECRET_KEY.as_deref() else {
+        warn!("TURNSTILE_SECRET_KEY not provided in env, captchas will not be validated!");
+        return Ok(());
+    };
     let resp = get_client()
         .post("https://challenges.cloudflare.com/turnstile/v0/siteverify")
         .json(&TurnstileVerifyRequest {
-            secret: &TURNSTILE_SECRET_KEY,
+            secret: &key,
             response: token,
             remoteip: ip,
         })
