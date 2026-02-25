@@ -1425,6 +1425,209 @@ paths:
                 $ref: '#/components/schemas/Error'
       security:
       - token: []
+  /guilds/{guild_id}/bans:
+    get:
+      tags:
+      - members
+      summary: Get Guild Bans
+      description: Returns a list of all bans in the guild. Requires the `BAN_MEMBERS` permission.
+      operationId: get_bans
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      responses:
+        '200':
+          description: Array of ban objects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GuildBan'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing BAN_MEMBERS permission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
+  /guilds/{guild_id}/bans/{user_id}:
+    get:
+      tags:
+      - members
+      summary: Get Guild Ban
+      description: Returns the ban entry for the given user in the guild. Requires the `BAN_MEMBERS` permission.
+      operationId: get_ban
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      responses:
+        '200':
+          description: Ban object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuildBan'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing BAN_MEMBERS permission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild or ban not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
+    put:
+      tags:
+      - members
+      summary: Ban Member
+      description: |-
+        Bans a user from a guild. The user is removed from the guild if they are currently a member.
+        Requires the `BAN_MEMBERS` permission, and the target's highest role must be lower than yours.
+      operationId: create_ban
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BanMemberPayload'
+        required: true
+      responses:
+        '201':
+          description: Ban was created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuildBan'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: |-
+            You are forbidden from banning this user. This can be because:
+            * You are not a member of the guild.
+            * You are missing the BAN_MEMBERS permission.
+            * The target's top role is equal to or higher than yours.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: User is already banned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
+    delete:
+      tags:
+      - members
+      summary: Unban Member
+      description: Removes the ban for the given user from the guild. Requires the `BAN_MEMBERS` permission.
+      operationId: unban_member
+      parameters:
+      - name: guild_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      responses:
+        '204':
+          description: Ban was removed
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing BAN_MEMBERS permission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guild or ban not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - token: []
   /guilds/{guild_id}/bots/{bot_id}:
     put:
       tags:
@@ -4597,6 +4800,29 @@ components:
             enum:
             - role_is_managed
       - type: object
+        description: You are banned from the guild you are trying to join.
+        required:
+        - guild_id
+        - message
+        - type
+        properties:
+          guild_id:
+            type: integer
+            format: int64
+            description: The ID of the guild you are banned from.
+            minimum: 0
+          message:
+            type: string
+            description: The error message.
+          reason:
+            type: string
+            description: The reason for the ban, if any.
+            nullable: true
+          type:
+            type: string
+            enum:
+            - banned_from_guild
+      - type: object
         description: |-
           You cannot leave a server or group DM that you are the owner of (you should transfer
           ownership before leaving).
@@ -5102,9 +5328,7 @@ components:
         modified once changed.
       required:
       - code
-      - inviter_id
       - guild_id
-      - created_at
       - uses
       - max_uses
       - max_age
@@ -5115,7 +5339,10 @@ components:
         created_at:
           type: string
           format: date-time
-          description: A timestamp representing when this invite was created.
+          description: |-
+            A timestamp representing when this invite was created. This is `None` if this is a vanity
+            invite.
+          nullable: true
         guild:
           allOf:
           - $ref: '#/components/schemas/PartialGuild'
@@ -5128,7 +5355,8 @@ components:
         inviter_id:
           type: integer
           format: int64
-          description: The ID of the user that created this invite.
+          description: The ID of the user that created this invite. This is `None` if this is a vanity invite.
+          nullable: true
           minimum: 0
         max_age:
           type: integer
@@ -5507,7 +5735,7 @@ components:
           format: int64
           description: The ID of the owner of the guild.
           minimum: 0
-        vanity_url:
+        vanity_code:
           type: string
           description: |-
             The vanity URL code of the guild. This solely includes the code, not the full URL.

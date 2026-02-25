@@ -16,8 +16,8 @@ use axum::{
 };
 use essence::{
     db::{get_pool, GuildDbExt, MemberDbExt, RoleDbExt, UserDbExt},
-    http::member::{AddBotPayload, EditClientMemberPayload, EditMemberPayload},
-    models::{BotFlags, Member, Permissions},
+    http::member::{AddBotPayload, BanMemberPayload, EditClientMemberPayload, EditMemberPayload},
+    models::{BotFlags, GuildBan, Member, Permissions},
     utoipa, Error, Maybe, NotFoundExt,
 };
 use reqwest::StatusCode;
@@ -274,6 +274,25 @@ pub async fn kick_member(
         .await?;
 
     db.delete_member(guild_id, member_id).await?;
+
+    #[cfg(feature = "ws")]
+    {
+        let info = MemberRemoveInfo::Kick {
+            moderator_id: user_id,
+        };
+        let user_event =
+            amqp::publish_user_event(member_id, OutboundMessage::GuildRemove { guild_id, info });
+        let guild_event = amqp::publish_bulk_event(
+            guild_id,
+            OutboundMessage::MemberRemove {
+                guild_id,
+                user_id: member_id,
+                info,
+            },
+        );
+        tokio::try_join!(user_event, guild_event)?;
+    }
+
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -326,6 +345,165 @@ pub async fn leave_guild(Auth(user_id, _): Auth, Path(guild_id): Path<u64>) -> N
             },
         );
         tokio::try_join!(user_event, guild_event)?;
+    }
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Get Guild Bans
+///
+/// Returns a list of all bans in the guild. Requires the `BAN_MEMBERS` permission.
+#[utoipa::path(
+    get,
+    path = "/guilds/{guild_id}/bans",
+    responses(
+        (status = OK, description = "Array of ban objects", body = [GuildBan]),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = FORBIDDEN, description = "Missing BAN_MEMBERS permission", body = Error),
+        (status = NOT_FOUND, description = "Guild not found", body = Error),
+    ),
+    security(("token" = [])),
+)]
+pub async fn get_bans(
+    Auth(user_id, _): Auth,
+    Path(guild_id): Path<u64>,
+) -> RouteResult<Vec<GuildBan>> {
+    let db = get_pool();
+    db.assert_member_has_permissions(guild_id, user_id, None, Permissions::BAN_MEMBERS)
+        .await?;
+
+    let bans = db.fetch_all_bans(guild_id).await?;
+    Ok(Response::ok(bans))
+}
+
+/// Get Guild Ban
+///
+/// Returns the ban entry for the given user in the guild. Requires the `BAN_MEMBERS` permission.
+#[utoipa::path(
+    get,
+    path = "/guilds/{guild_id}/bans/{user_id}",
+    responses(
+        (status = OK, description = "Ban object", body = GuildBan),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = FORBIDDEN, description = "Missing BAN_MEMBERS permission", body = Error),
+        (status = NOT_FOUND, description = "Guild or ban not found", body = Error),
+    ),
+    security(("token" = [])),
+)]
+pub async fn get_ban(
+    Auth(user_id, _): Auth,
+    Path((guild_id, target_id)): Path<(u64, u64)>,
+) -> RouteResult<GuildBan> {
+    let db = get_pool();
+    db.assert_member_has_permissions(guild_id, user_id, None, Permissions::BAN_MEMBERS)
+        .await?;
+
+    let ban = db.fetch_ban(guild_id, target_id).await?.ok_or_not_found(
+        "ban",
+        format!("No ban found for user {target_id} in guild {guild_id}"),
+    )?;
+
+    Ok(Response::ok(ban))
+}
+
+/// Ban Member
+///
+/// Bans a user from a guild. The user is removed from the guild if they are currently a member.
+/// Requires the `BAN_MEMBERS` permission, and the target's highest role must be lower than yours.
+#[utoipa::path(
+    put,
+    path = "/guilds/{guild_id}/bans/{user_id}",
+    request_body = BanMemberPayload,
+    responses(
+        (status = CREATED, description = "Ban was created", body = GuildBan),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (
+            status = FORBIDDEN,
+            description = "\
+                You are forbidden from banning this user. This can be because:\n\
+                * You are not a member of the guild.\n\
+                * You are missing the BAN_MEMBERS permission.\n\
+                * The target's top role is equal to or higher than yours.\
+            ",
+            body = Error,
+        ),
+        (status = CONFLICT, description = "User is already banned", body = Error),
+        (status = NOT_FOUND, description = "Guild not found", body = Error),
+    ),
+    security(("token" = [])),
+)]
+pub async fn create_ban(
+    Auth(user_id, _): Auth,
+    Path((guild_id, target_id)): Path<(u64, u64)>,
+    payload: Option<Json<BanMemberPayload>>,
+) -> RouteResult<GuildBan> {
+    if user_id == target_id {
+        return Err(Response::from(Error::CannotActOnSelf {
+            message: "You cannot ban yourself".to_string(),
+        }));
+    }
+
+    let mut db = get_pool();
+    db.assert_member_has_permissions(guild_id, user_id, None, Permissions::BAN_MEMBERS)
+        .await?;
+
+    if db.fetch_member_by_id(guild_id, target_id).await?.is_some() {
+        db.assert_top_role_higher_than_target(guild_id, user_id, target_id)
+            .await?;
+    }
+
+    let payload = payload.map(|Json(p)| p).unwrap_or_default();
+    let ban = db.ban_member(guild_id, target_id, user_id, payload).await?;
+
+    #[cfg(feature = "ws")]
+    {
+        let info = MemberRemoveInfo::Ban {
+            moderator_id: user_id,
+        };
+        let user_event =
+            amqp::publish_user_event(target_id, OutboundMessage::GuildRemove { guild_id, info });
+        let guild_event = amqp::publish_bulk_event(
+            guild_id,
+            OutboundMessage::MemberRemove {
+                guild_id,
+                user_id: target_id,
+                info,
+            },
+        );
+        tokio::try_join!(user_event, guild_event)?;
+    }
+
+    Ok(Response::created(ban))
+}
+
+/// Unban Member
+///
+/// Removes the ban for the given user from the guild. Requires the `BAN_MEMBERS` permission.
+#[utoipa::path(
+    delete,
+    path = "/guilds/{guild_id}/bans/{user_id}",
+    responses(
+        (status = NO_CONTENT, description = "Ban was removed"),
+        (status = UNAUTHORIZED, description = "Invalid token", body = Error),
+        (status = FORBIDDEN, description = "Missing BAN_MEMBERS permission", body = Error),
+        (status = NOT_FOUND, description = "Guild or ban not found", body = Error),
+    ),
+    security(("token" = [])),
+)]
+pub async fn unban_member(
+    Auth(user_id, _): Auth,
+    Path((guild_id, target_id)): Path<(u64, u64)>,
+) -> NoContentResult {
+    let mut db = get_pool();
+    db.assert_member_has_permissions(guild_id, user_id, None, Permissions::BAN_MEMBERS)
+        .await?;
+
+    let removed = db.unban_member(guild_id, target_id).await?;
+    if !removed {
+        return Err(Response::from(Error::NotFound {
+            entity: "ban".to_string(),
+            message: format!("No ban found for user {target_id} in guild {guild_id}"),
+        }));
     }
 
     Ok(StatusCode::NO_CONTENT)
@@ -430,5 +608,15 @@ pub fn router() -> Router {
         .route(
             "/guilds/:guild_id/bots/:bot_id",
             put(add_bot_to_guild.layer(ratelimit!(3, 8))),
+        )
+        .route(
+            "/guilds/:guild_id/bans",
+            get(get_bans.layer(ratelimit!(3, 8))),
+        )
+        .route(
+            "/guilds/:guild_id/bans/:user_id",
+            get(get_ban.layer(ratelimit!(5, 7)))
+                .put(create_ban.layer(ratelimit!(4, 8)))
+                .delete(unban_member.layer(ratelimit!(4, 8))),
         )
 }
