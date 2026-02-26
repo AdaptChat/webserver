@@ -7,13 +7,14 @@ use deadpool_lapin::{
         publisher_confirm::PublisherConfirm,
         types::FieldTable,
         BasicProperties, Channel,
-        Error::InvalidChannelState,
+        Error::{self as LapinError, InvalidChannelState},
         ExchangeKind,
     },
     Object, Pool, Runtime,
 };
 use essence::Error;
-use std::sync::OnceLock;
+use std::collections::HashSet;
+use std::sync::{Mutex, OnceLock};
 use tokio::sync::RwLock;
 
 pub mod prelude {
@@ -25,6 +26,8 @@ pub mod prelude {
 pub static POOL: OnceLock<Pool> = OnceLock::new();
 /// AMQP mono-channel (might change in the future)
 pub static CHANNEL: OnceLock<RwLock<Channel>> = OnceLock::new();
+/// Exchanges which have already been declared.
+static DECLARED_EXCHANGES: Mutex<Option<HashSet<String>>> = Mutex::new(None);
 
 /// Connects to the amqp server and registers the pool.
 pub async fn connect() -> Result<(), Box<dyn std::error::Error>> {
@@ -50,25 +53,41 @@ pub async fn get_pool() -> Object {
         .expect("unable to get amqp pool")
 }
 
+fn is_exchange_declared(exchange: &str) -> bool {
+    let mut guard = DECLARED_EXCHANGES.lock().unwrap();
+    let set = guard.get_or_insert_with(HashSet::new);
+    !set.insert(exchange.to_string())
+}
+
+async fn ensure_exchange_declared(
+    channel: &Channel,
+    exchange: &str,
+    kind: ExchangeKind,
+) -> Result<(), LapinError> {
+    if !is_exchange_declared(exchange) {
+        channel
+            .exchange_declare(
+                exchange,
+                kind,
+                ExchangeDeclareOptions {
+                    auto_delete: false,
+                    ..Default::default()
+                },
+                FieldTable::default(),
+            )
+            .await?;
+    }
+    Ok(())
+}
+
 async fn _publish(
     channel: &Channel,
     exchange: &str,
     kind: ExchangeKind,
-    auto_delete: bool,
     routing_key: &str,
     payload: &[u8],
-) -> Result<PublisherConfirm, deadpool_lapin::lapin::Error> {
-    channel
-        .exchange_declare(
-            exchange.as_ref(),
-            kind,
-            ExchangeDeclareOptions {
-                auto_delete,
-                ..Default::default()
-            },
-            FieldTable::default(),
-        )
-        .await?;
+) -> Result<PublisherConfirm, LapinError> {
+    ensure_exchange_declared(channel, exchange, kind).await?;
 
     channel
         .basic_publish(
@@ -85,7 +104,6 @@ async fn _publish(
 pub async fn publish<T: Encode + Send>(
     exchange: &str,
     kind: ExchangeKind,
-    auto_delete: bool,
     routing_key: &str,
     data: T,
 ) -> essence::Result<()> {
@@ -102,15 +120,7 @@ pub async fn publish<T: Encode + Send>(
 
     macro_rules! publish {
         ($channel:expr) => {
-            _publish(
-                $channel,
-                exchange,
-                kind.clone(),
-                auto_delete,
-                routing_key,
-                &bytes,
-            )
-            .await
+            _publish($channel, exchange, kind.clone(), routing_key, &bytes).await
         };
     }
 
@@ -118,6 +128,13 @@ pub async fn publish<T: Encode + Send>(
         drop(channel);
 
         if matches!(err, InvalidChannelState(_)) {
+            // channel died, reset exchanges
+            {
+                let mut guard = DECLARED_EXCHANGES.lock().unwrap();
+                if let Some(set) = guard.as_mut() {
+                    set.clear();
+                }
+            }
             match try {
                 let channel = get_pool().await.create_channel().await?;
                 publish!(&channel)?;
@@ -145,26 +162,12 @@ pub async fn publish_bulk_event<T: Encode + Send>(
     exchange_id: u64,
     event: T,
 ) -> essence::Result<()> {
-    publish(
-        &exchange_id.to_string(),
-        ExchangeKind::Topic,
-        true,
-        "all",
-        event,
-    )
-    .await
+    publish(&exchange_id.to_string(), ExchangeKind::Topic, "all", event).await
 }
 
 /// Sends a user-related event to the amqp server.
 pub async fn publish_user_event<T: Encode + Send>(user_id: u64, event: T) -> essence::Result<()> {
-    publish(
-        "events",
-        ExchangeKind::Topic,
-        false,
-        &user_id.to_string(),
-        event,
-    )
-    .await
+    publish("events", ExchangeKind::Topic, &user_id.to_string(), event).await
 }
 
 /// Sends a bulk event if `exchange_id` is `Some`, otherwise fallsback to a user-related event.
