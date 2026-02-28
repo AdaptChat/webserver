@@ -3455,6 +3455,21 @@ components:
           format: int64
           description: The size of the attachment, in bytes.
           minimum: 0
+    BanMemberPayload:
+      type: object
+      description: The payload sent to ban a member from a guild.
+      properties:
+        delete_message_seconds:
+          type: integer
+          format: int32
+          description: |-
+            The number of seconds of message history to delete from the banned user. Capped at 7 days
+            (604800 seconds). If not specified or `0`, no messages are deleted.
+          minimum: 0
+        reason:
+          type: string
+          description: The reason for the ban.
+          nullable: true
     Bot:
       type: object
       description: Represents details about a bot.
@@ -5123,6 +5138,34 @@ components:
               * The client receives a guild create event through the gateway.
             nullable: true
       description: Represents a guild with all information, sometimes referred to as a server.
+    GuildBan:
+      allOf:
+      - $ref: '#/components/schemas/MaybePartialUser'
+      - type: object
+        required:
+        - guild_id
+        - moderator_id
+        - banned_at
+        properties:
+          banned_at:
+            type: string
+            format: date-time
+            description: The time that the ban was issued.
+          guild_id:
+            type: integer
+            format: int64
+            description: The ID of the guild this ban is in.
+            minimum: 0
+          moderator_id:
+            type: integer
+            format: int64
+            description: The ID of the moderator that issued the ban.
+            minimum: 0
+          reason:
+            type: string
+            description: The reason for the ban, if any.
+            nullable: true
+      description: Represents a ban entry in a guild.
     GuildChannel:
       allOf:
       - $ref: '#/components/schemas/GuildChannelInfo'

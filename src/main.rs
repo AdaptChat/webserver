@@ -18,6 +18,8 @@ extern crate log;
 #[cfg(feature = "ws")]
 pub mod amqp;
 pub mod cdn;
+#[cfg(feature = "email")]
+pub mod email;
 pub mod extract;
 pub mod notification;
 mod openapi;

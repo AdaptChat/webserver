@@ -2,6 +2,8 @@ use std::sync::LazyLock;
 
 #[cfg(feature = "ws")]
 use crate::amqp::prelude::*;
+#[cfg(feature = "email")]
+use crate::email::parse_and_validate_email;
 use crate::{
     cdn::{get_client, upload_user_avatar},
     extract::{Auth, Json},
@@ -146,7 +148,7 @@ async fn validate_captcha(token: String, ip: Option<String>) -> Result<(), Error
     let resp = get_client()
         .post("https://challenges.cloudflare.com/turnstile/v0/siteverify")
         .json(&TurnstileVerifyRequest {
-            secret: &key,
+            secret: key,
             response: token,
             remoteip: ip,
         })
@@ -208,6 +210,9 @@ pub async fn create_user(
             .and_then(|v| v.to_str().ok().map(ToString::to_string)),
     )
     .await?;
+
+    #[cfg(feature = "email")]
+    parse_and_validate_email(&email)?;
 
     let db = get_pool();
     if db.is_email_taken(&email).await? {

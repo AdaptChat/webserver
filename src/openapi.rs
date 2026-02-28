@@ -1,3 +1,5 @@
+#![allow(clippy::needless_for_each)]
+
 use crate::{
     routes::{auth, channels, emojis, guilds, invites, members, messages, roles, users},
     unicode::EmojiData,
@@ -107,6 +109,7 @@ use essence::{
         http::invite::CreateInvitePayload,
         http::member::EditClientMemberPayload,
         http::member::EditMemberPayload,
+        http::member::BanMemberPayload,
         http::member::AddBotPayload,
         http::message::CreateMessagePayload,
         http::message::EditMessagePayload,
@@ -138,6 +141,7 @@ use essence::{
         models::GuildMemberCount,
         models::PartialGuild,
         models::Guild,
+        models::GuildBan,
         models::GuildFlags,
         models::EmbedType,
         models::EmbedAuthor,
