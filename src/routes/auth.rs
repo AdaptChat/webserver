@@ -121,9 +121,24 @@ pub async fn request_email_verification(
         .await?
         .ok_or_not_found("user", "user not found")?;
 
-    let new_email = payload.and_then(|Json(p)| p.new_email);
+    let (new_email, password) = payload
+        .map(|Json(p)| (p.new_email, p.password))
+        .unwrap_or_default();
+    let is_verified = user.flags.contains(UserFlags::VERIFIED);
 
     let target_email: String = if let Some(ref email) = new_email {
+        if is_verified {
+            let password = password.ok_or_else(|| Error::MissingField {
+                field: "password".to_string(),
+                message: "A password is required to change your email address.".to_string(),
+            })?;
+            if !db.verify_password(user_id, password).await? {
+                return Err(Response::from(Error::InvalidCredentials {
+                    what: "password".to_string(),
+                    message: "Invalid password".to_string(),
+                }));
+            }
+        }
         if db.is_email_taken(email).await? {
             return Err(Response::from(Error::AlreadyTaken {
                 what: "email".to_string(),
@@ -138,12 +153,10 @@ pub async fn request_email_verification(
                 message: "Your email address is already verified.".to_string(),
             }));
         }
-        user.email.clone().ok_or_else(|| {
-            Response::from(Error::InternalError {
-                what: Some("email".to_string()),
-                message: "Account has no associated email address.".to_string(),
-                debug: None,
-            })
+        user.email.clone().ok_or_else(|| Error::InternalError {
+            what: Some("email".to_string()),
+            message: "Account has no associated email address.".to_string(),
+            debug: None,
         })?
     };
 
