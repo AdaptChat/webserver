@@ -40,7 +40,7 @@ use utoipa_scalar::{Scalar, Servable};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    dotenv::dotenv().expect("failed to load dotenv");
+    drop(dotenv::dotenv());
     env_logger::init();
 
     essence::connect(
