@@ -32,7 +32,7 @@ static DECLARED_EXCHANGES: Mutex<Option<HashSet<String>>> = Mutex::new(None);
 /// Connects to the amqp server and registers the pool.
 pub async fn connect() -> Result<(), Box<dyn std::error::Error>> {
     let pool = deadpool_lapin::Config {
-        url: Some("amqp://127.0.0.1:5672".to_string()),
+        url: std::env::var("AMQP_URL").ok(),
         ..Default::default()
     }
     .create_pool(Some(Runtime::Tokio1))?;
